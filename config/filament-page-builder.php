@@ -7,7 +7,11 @@ use KalimeroMK\FilamentPageBuilder\Models\PageRevision;
 use KalimeroMK\FilamentPageBuilder\Widgets\ButtonWidget;
 use KalimeroMK\FilamentPageBuilder\Widgets\ContainerWidget;
 use KalimeroMK\FilamentPageBuilder\Widgets\HeadingWidget;
+use KalimeroMK\FilamentPageBuilder\Widgets\IconWidget;
+use KalimeroMK\FilamentPageBuilder\Widgets\ImageWidget;
+use KalimeroMK\FilamentPageBuilder\Widgets\SpacerWidget;
 use KalimeroMK\FilamentPageBuilder\Widgets\TextWidget;
+use KalimeroMK\FilamentPageBuilder\Widgets\VideoWidget;
 
 return [
     /*
@@ -88,5 +92,9 @@ return [
         HeadingWidget::class,
         TextWidget::class,
         ButtonWidget::class,
+        ImageWidget::class,
+        SpacerWidget::class,
+        IconWidget::class,
+        VideoWidget::class,
     ],
 ];

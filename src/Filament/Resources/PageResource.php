@@ -30,6 +30,7 @@ use KalimeroMK\FilamentPageBuilder\Enums\PageStatus;
 use KalimeroMK\FilamentPageBuilder\Filament\Resources\PageResource\Pages\CreatePage;
 use KalimeroMK\FilamentPageBuilder\Filament\Resources\PageResource\Pages\EditPage;
 use KalimeroMK\FilamentPageBuilder\Filament\Resources\PageResource\Pages\ListPages;
+use KalimeroMK\FilamentPageBuilder\Filament\Resources\PageResource\Pages\VisualBuilderPage;
 use KalimeroMK\FilamentPageBuilder\FilamentPageBuilderPlugin;
 use KalimeroMK\FilamentPageBuilder\Models\Page;
 use UnitEnum;
@@ -191,6 +192,11 @@ class PageResource extends Resource
                     ->options(PageStatus::class),
             ])
             ->recordActions([
+                Action::make('visual_builder')
+                    ->label('Visual Builder')
+                    ->icon('heroicon-o-squares-plus')
+                    ->color('primary')
+                    ->url(fn (Page $record): string => static::getUrl('builder', ['record' => $record])),
                 Action::make('preview')
                     ->label('Preview Draft')
                     ->icon('heroicon-o-eye')
@@ -220,6 +226,7 @@ class PageResource extends Resource
             'index' => ListPages::route('/'),
             'create' => CreatePage::route('/create'),
             'edit' => EditPage::route('/{record}/edit'),
+            'builder' => VisualBuilderPage::route('/{record}/builder'),
         ];
     }
 }

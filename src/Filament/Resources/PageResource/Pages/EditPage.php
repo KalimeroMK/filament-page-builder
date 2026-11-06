@@ -57,6 +57,12 @@ class EditPage extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('visual_builder')
+                ->label('Open Visual Builder')
+                ->icon('heroicon-o-squares-plus')
+                ->color('primary')
+                ->url(fn (): string => PageResource::getUrl('builder', ['record' => $this->record])),
+
             Action::make('preview_draft')
                 ->label('Preview Draft')
                 ->icon('heroicon-o-eye')

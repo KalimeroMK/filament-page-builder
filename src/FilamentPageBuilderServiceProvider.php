@@ -9,6 +9,7 @@ use KalimeroMK\FilamentPageBuilder\Contracts\WidgetContract;
 use KalimeroMK\FilamentPageBuilder\DynamicTags\CurrentDateDynamicTag;
 use KalimeroMK\FilamentPageBuilder\DynamicTags\ModelAttributeDynamicTag;
 use KalimeroMK\FilamentPageBuilder\DynamicTags\PageTitleDynamicTag;
+use KalimeroMK\FilamentPageBuilder\Livewire\VisualPageBuilderEditor;
 use KalimeroMK\FilamentPageBuilder\Registries\DynamicTagRegistry;
 use KalimeroMK\FilamentPageBuilder\Registries\TemplateRegistry;
 use KalimeroMK\FilamentPageBuilder\Registries\WidgetRegistry;
@@ -17,6 +18,7 @@ use KalimeroMK\FilamentPageBuilder\Rendering\PageRenderer;
 use KalimeroMK\FilamentPageBuilder\Services\PageBuilderManager;
 use KalimeroMK\FilamentPageBuilder\Services\PageCacheService;
 use KalimeroMK\FilamentPageBuilder\Services\PagePublishService;
+use Livewire\Livewire;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 
@@ -75,7 +77,13 @@ class FilamentPageBuilderServiceProvider extends PackageServiceProvider
     {
         $this->registerCoreWidgets();
         $this->registerCoreDynamicTags();
+        $this->registerLivewireComponents();
         $this->registerBladeDirectives();
+    }
+
+    protected function registerLivewireComponents(): void
+    {
+        Livewire::component('fpb-visual-editor', VisualPageBuilderEditor::class);
     }
 
     protected function registerCoreWidgets(): void

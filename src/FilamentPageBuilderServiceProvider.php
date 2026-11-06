@@ -1,0 +1,112 @@
+<?php
+
+declare(strict_types=1);
+
+namespace KalimeroMK\FilamentPageBuilder;
+
+use Illuminate\Support\Facades\Blade;
+use KalimeroMK\FilamentPageBuilder\Contracts\WidgetContract;
+use KalimeroMK\FilamentPageBuilder\DynamicTags\CurrentDateDynamicTag;
+use KalimeroMK\FilamentPageBuilder\DynamicTags\ModelAttributeDynamicTag;
+use KalimeroMK\FilamentPageBuilder\DynamicTags\PageTitleDynamicTag;
+use KalimeroMK\FilamentPageBuilder\Registries\DynamicTagRegistry;
+use KalimeroMK\FilamentPageBuilder\Registries\TemplateRegistry;
+use KalimeroMK\FilamentPageBuilder\Registries\WidgetRegistry;
+use KalimeroMK\FilamentPageBuilder\Rendering\CssGenerator;
+use KalimeroMK\FilamentPageBuilder\Rendering\PageRenderer;
+use KalimeroMK\FilamentPageBuilder\Services\PageBuilderManager;
+use KalimeroMK\FilamentPageBuilder\Services\PageCacheService;
+use KalimeroMK\FilamentPageBuilder\Services\PagePublishService;
+use Spatie\LaravelPackageTools\Package;
+use Spatie\LaravelPackageTools\PackageServiceProvider;
+
+class FilamentPageBuilderServiceProvider extends PackageServiceProvider
+{
+    public static string $name = 'filament-page-builder';
+
+    public function configurePackage(Package $package): void
+    {
+        $package
+            ->name(static::$name)
+            ->hasConfigFile()
+            ->hasViews()
+            ->hasRoute('web')
+            ->hasMigrations([
+                'create_fpb_pages_table',
+                'create_fpb_page_revisions_table',
+            ]);
+    }
+
+    public function packageRegistered(): void
+    {
+        $this->app->singleton(WidgetRegistry::class, fn () => new WidgetRegistry());
+        $this->app->singleton(DynamicTagRegistry::class, fn () => new DynamicTagRegistry());
+        $this->app->singleton(TemplateRegistry::class, fn () => new TemplateRegistry());
+        $this->app->singleton(CssGenerator::class, fn () => new CssGenerator());
+        $this->app->singleton(PageCacheService::class, fn () => new PageCacheService());
+
+        $this->app->singleton(PageRenderer::class, function ($app) {
+            return new PageRenderer(
+                widgets: $app->make(WidgetRegistry::class),
+                dynamicTags: $app->make(DynamicTagRegistry::class),
+                cssGenerator: $app->make(CssGenerator::class),
+                cache: $app->make(PageCacheService::class),
+            );
+        });
+
+        $this->app->singleton(PagePublishService::class, function ($app) {
+            return new PagePublishService(
+                cache: $app->make(PageCacheService::class),
+            );
+        });
+
+        $this->app->singleton(PageBuilderManager::class, function ($app) {
+            return new PageBuilderManager(
+                widgets: $app->make(WidgetRegistry::class),
+                dynamicTags: $app->make(DynamicTagRegistry::class),
+                templates: $app->make(TemplateRegistry::class),
+                renderer: $app->make(PageRenderer::class),
+                publisher: $app->make(PagePublishService::class),
+            );
+        });
+    }
+
+    public function packageBooted(): void
+    {
+        $this->registerCoreWidgets();
+        $this->registerCoreDynamicTags();
+        $this->registerBladeDirectives();
+    }
+
+    protected function registerCoreWidgets(): void
+    {
+        /** @var WidgetRegistry $registry */
+        $registry = $this->app->make(WidgetRegistry::class);
+
+        /** @var array<int, class-string<WidgetContract>> $widgets */
+        $widgets = config('filament-page-builder.widgets', []);
+
+        foreach ($widgets as $widgetClass) {
+            if (is_string($widgetClass) && class_exists($widgetClass)) {
+                $registry->register($widgetClass);
+            }
+        }
+    }
+
+    protected function registerCoreDynamicTags(): void
+    {
+        /** @var DynamicTagRegistry $registry */
+        $registry = $this->app->make(DynamicTagRegistry::class);
+
+        $registry->register(PageTitleDynamicTag::class);
+        $registry->register(CurrentDateDynamicTag::class);
+        $registry->register(ModelAttributeDynamicTag::class);
+    }
+
+    protected function registerBladeDirectives(): void
+    {
+        Blade::directive('renderPageBuilder', function (string $expression): string {
+            return "<?php echo app(\\KalimeroMK\\FilamentPageBuilder\\Rendering\\PageRenderer::class)->renderPage({$expression})->toHtml(); ?>";
+        });
+    }
+}

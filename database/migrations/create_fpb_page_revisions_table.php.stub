@@ -1,0 +1,37 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        $pagesTable = config('filament-page-builder.tables.pages', 'fpb_pages');
+        $revisionsTable = config('filament-page-builder.tables.page_revisions', 'fpb_page_revisions');
+
+        Schema::create($revisionsTable, function (Blueprint $table) use ($pagesTable): void {
+            $table->id();
+            $table->foreignId('page_id')->constrained($pagesTable)->cascadeOnDelete();
+            $table->unsignedInteger('version_number')->default(1);
+            $table->string('type', 32)->default('publish');
+            $table->string('summary')->nullable();
+            $table->json('schema_snapshot');
+            $table->json('meta_snapshot')->nullable();
+            $table->unsignedBigInteger('created_by')->nullable()->index();
+            $table->timestamp('created_at')->useCurrent();
+
+            $table->index(['page_id', 'version_number']);
+        });
+    }
+
+    public function down(): void
+    {
+        $revisionsTable = config('filament-page-builder.tables.page_revisions', 'fpb_page_revisions');
+
+        Schema::dropIfExists($revisionsTable);
+    }
+};

@@ -1,0 +1,30 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Support\Facades\Route;
+use KalimeroMK\FilamentPageBuilder\Http\Controllers\PageController;
+use KalimeroMK\FilamentPageBuilder\Http\Controllers\PagePreviewController;
+
+if (config('filament-page-builder.routing.enabled', true)) {
+    $previewPrefix = trim((string) config('filament-page-builder.routing.preview_prefix', '_builder/preview'), '/');
+    $previewMiddleware = (array) config('filament-page-builder.routing.preview_middleware', ['web']);
+
+    Route::middleware($previewMiddleware)
+        ->prefix($previewPrefix)
+        ->group(function (): void {
+            Route::get('/{page}', [PagePreviewController::class, 'show'])
+                ->name('filament-page-builder.preview');
+        });
+
+    $publicPrefix = trim((string) config('filament-page-builder.routing.prefix', 'pages'), '/');
+    $publicMiddleware = (array) config('filament-page-builder.routing.middleware', ['web']);
+
+    Route::middleware($publicMiddleware)
+        ->prefix($publicPrefix)
+        ->group(function (): void {
+            Route::get('/{slug}', [PageController::class, 'show'])
+                ->where('slug', '[A-Za-z0-9\-_\/]+')
+                ->name('filament-page-builder.show');
+        });
+}

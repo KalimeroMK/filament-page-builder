@@ -1,0 +1,92 @@
+<?php
+
+declare(strict_types=1);
+
+use KalimeroMK\FilamentPageBuilder\Models\Page;
+use KalimeroMK\FilamentPageBuilder\Models\PageRevision;
+use KalimeroMK\FilamentPageBuilder\Widgets\ButtonWidget;
+use KalimeroMK\FilamentPageBuilder\Widgets\ContainerWidget;
+use KalimeroMK\FilamentPageBuilder\Widgets\HeadingWidget;
+use KalimeroMK\FilamentPageBuilder\Widgets\TextWidget;
+
+return [
+    /*
+    |--------------------------------------------------------------------------
+    | Models
+    |--------------------------------------------------------------------------
+    */
+    'models' => [
+        'page' => Page::class,
+        'page_revision' => PageRevision::class,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Table Names
+    |--------------------------------------------------------------------------
+    */
+    'tables' => [
+        'pages' => 'fpb_pages',
+        'page_revisions' => 'fpb_page_revisions',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Routing Configuration
+    |--------------------------------------------------------------------------
+    | Controls whether the package registers public frontend routes and
+    | protected preview routes for viewing draft_content before publishing.
+    */
+    'routing' => [
+        'enabled' => true,
+        'prefix' => 'pages',
+        'preview_prefix' => '_builder/preview',
+        'middleware' => ['web'],
+        'preview_middleware' => ['web'],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Page Layouts
+    |--------------------------------------------------------------------------
+    */
+    'layouts' => [
+        'default' => 'filament-page-builder::layouts.default',
+        'canvas' => 'filament-page-builder::layouts.canvas',
+        'full_width' => 'filament-page-builder::layouts.full-width',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Responsive Breakpoints (px)
+    |--------------------------------------------------------------------------
+    | Used by CssGenerator for @container and @media responsive rules.
+    */
+    'breakpoints' => [
+        'tablet' => 1024,
+        'mobile' => 767,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Render Cache Configuration
+    |--------------------------------------------------------------------------
+    */
+    'cache' => [
+        'enabled' => true,
+        'ttl' => 3600 * 24, // 24 hours
+        'prefix' => 'fpb_page_render_',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Core Registered Widgets
+    |--------------------------------------------------------------------------
+    */
+    'widgets' => [
+        ContainerWidget::class,
+        HeadingWidget::class,
+        TextWidget::class,
+        ButtonWidget::class,
+    ],
+];

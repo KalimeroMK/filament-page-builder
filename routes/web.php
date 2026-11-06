@@ -27,4 +27,12 @@ if (config('filament-page-builder.routing.enabled', true)) {
                 ->where('slug', '[A-Za-z0-9\-_\/]+')
                 ->name('filament-page-builder.show');
         });
+
+    Route::middleware($publicMiddleware)->group(function (): void {
+        $throttle = (string) config('filament-page-builder.forms.rate_limit', '10,1');
+
+        Route::post('/_builder/form/{page}/{elementId}', [\KalimeroMK\FilamentPageBuilder\Http\Controllers\FormController::class, 'submit'])
+            ->middleware('throttle:' . $throttle)
+            ->name('filament-page-builder.form.submit');
+    });
 }

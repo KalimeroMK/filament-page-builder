@@ -20,6 +20,7 @@ use KalimeroMK\FilamentPageBuilder\Widgets\TestimonialWidget;
 use KalimeroMK\FilamentPageBuilder\Widgets\TextWidget;
 use KalimeroMK\FilamentPageBuilder\Widgets\VideoWidget;
 use KalimeroMK\FilamentPageBuilder\Widgets\LoopWidget;
+use KalimeroMK\FilamentPageBuilder\Widgets\FormWidget;
 
 return [
     /*
@@ -32,6 +33,7 @@ return [
         'page_revision' => PageRevision::class,
         'template' => PageTemplate::class,
         'theme_template' => \KalimeroMK\FilamentPageBuilder\Models\ThemeTemplate::class,
+        'form_submission' => \KalimeroMK\FilamentPageBuilder\Models\FormSubmission::class,
     ],
 
     /*
@@ -44,6 +46,7 @@ return [
         'page_revisions' => 'fpb_page_revisions',
         'templates' => 'fpb_templates',
         'theme_templates' => 'fpb_theme_templates',
+        'form_submissions' => 'fpb_form_submissions',
     ],
 
     /*
@@ -115,6 +118,17 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Form Builder Settings
+    |--------------------------------------------------------------------------
+    */
+    'forms' => [
+        'rate_limit' => '10,1',
+        'webhook_allowed_hosts' => [],
+        'allow_external_redirects' => false,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Core Registered Widgets
     |--------------------------------------------------------------------------
     */
@@ -134,5 +148,6 @@ return [
         TabsWidget::class,
         TestimonialWidget::class,
         LoopWidget::class,
+        FormWidget::class,
     ],
 ];

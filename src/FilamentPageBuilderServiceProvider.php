@@ -40,6 +40,7 @@ class FilamentPageBuilderServiceProvider extends PackageServiceProvider
                 'create_fpb_page_revisions_table',
                 'create_fpb_templates_table',
                 'create_fpb_theme_templates_table',
+                'create_fpb_form_submissions_table',
             ]);
     }
 
@@ -51,6 +52,7 @@ class FilamentPageBuilderServiceProvider extends PackageServiceProvider
         $this->app->singleton(CssGenerator::class, fn () => new CssGenerator());
         $this->app->singleton(PageCacheService::class, fn () => new PageCacheService());
         $this->app->singleton(ThemeConditionMatcher::class, fn () => new ThemeConditionMatcher());
+        $this->app->singleton(\KalimeroMK\FilamentPageBuilder\Registries\FormActionRegistry::class, fn () => new \KalimeroMK\FilamentPageBuilder\Registries\FormActionRegistry());
 
         $this->app->singleton(PageRenderer::class, function ($app) {
             return new PageRenderer(
@@ -90,8 +92,20 @@ class FilamentPageBuilderServiceProvider extends PackageServiceProvider
     {
         $this->registerCoreWidgets();
         $this->registerCoreDynamicTags();
+        $this->registerCoreFormActions();
         $this->registerLivewireComponents();
         $this->registerBladeDirectives();
+    }
+
+    protected function registerCoreFormActions(): void
+    {
+        /** @var \KalimeroMK\FilamentPageBuilder\Registries\FormActionRegistry $registry */
+        $registry = $this->app->make(\KalimeroMK\FilamentPageBuilder\Registries\FormActionRegistry::class);
+
+        $registry->register(\KalimeroMK\FilamentPageBuilder\FormActions\SaveToDatabaseAction::class);
+        $registry->register(\KalimeroMK\FilamentPageBuilder\FormActions\EmailAction::class);
+        $registry->register(\KalimeroMK\FilamentPageBuilder\FormActions\RedirectAction::class);
+        $registry->register(\KalimeroMK\FilamentPageBuilder\FormActions\WebhookAction::class);
     }
 
     protected function registerLivewireComponents(): void

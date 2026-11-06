@@ -34,6 +34,26 @@ class ThemeTemplateResource extends Resource
 {
     protected static ?string $recordTitleAttribute = 'title';
 
+    public static function canAccess(): bool
+    {
+        return \KalimeroMK\FilamentPageBuilder\Support\PageBuilderAuthorizer::can('theme_templates');
+    }
+
+    public static function canCreate(): bool
+    {
+        return \KalimeroMK\FilamentPageBuilder\Support\PageBuilderAuthorizer::can('theme_templates');
+    }
+
+    public static function canEdit(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return \KalimeroMK\FilamentPageBuilder\Support\PageBuilderAuthorizer::can('theme_templates');
+    }
+
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return \KalimeroMK\FilamentPageBuilder\Support\PageBuilderAuthorizer::can('theme_templates');
+    }
+
     public static function getModel(): string
     {
         /** @var class-string<ThemeTemplate> $model */
@@ -45,6 +65,11 @@ class ThemeTemplateResource extends Resource
     public static function getNavigationIcon(): string
     {
         return 'heroicon-o-swatch';
+    }
+
+    public static function canViewAny(): bool
+    {
+        return \KalimeroMK\FilamentPageBuilder\Support\PageBuilderAuthorizer::can('theme_templates');
     }
 
     public static function getNavigationLabel(): string

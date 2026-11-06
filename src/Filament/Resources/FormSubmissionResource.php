@@ -20,6 +20,16 @@ class FormSubmissionResource extends Resource
 {
     protected static ?string $recordTitleAttribute = 'id';
 
+    public static function canAccess(): bool
+    {
+        return \KalimeroMK\FilamentPageBuilder\Support\PageBuilderAuthorizer::can('submissions');
+    }
+
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return \KalimeroMK\FilamentPageBuilder\Support\PageBuilderAuthorizer::can('submissions');
+    }
+
     public static function getModel(): string
     {
         /** @var class-string<FormSubmission> $model */
@@ -31,6 +41,11 @@ class FormSubmissionResource extends Resource
     public static function getNavigationIcon(): string
     {
         return 'heroicon-o-inbox-arrow-down';
+    }
+
+    public static function canViewAny(): bool
+    {
+        return \KalimeroMK\FilamentPageBuilder\Support\PageBuilderAuthorizer::can('submissions');
     }
 
     public static function getNavigationLabel(): string

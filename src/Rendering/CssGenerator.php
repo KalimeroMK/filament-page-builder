@@ -16,8 +16,9 @@ class CssGenerator
     public function baseStyles(): string
     {
         $globalCss = app(\KalimeroMK\FilamentPageBuilder\Services\SiteStyleService::class)->toCss();
+        $customFontsCss = app(\KalimeroMK\FilamentPageBuilder\Services\CustomAssetsService::class)->fontsToCss();
 
-        return $globalCss . "\n" . <<<'CSS'
+        return $globalCss . "\n" . $customFontsCss . "\n" . <<<'CSS'
 .fpb-canvas-root {
     container-type: inline-size;
     container-name: fpb-canvas;
@@ -249,6 +250,44 @@ class CssGenerator
     color: var(--fpb-color, #1e293b);
     border-radius: var(--fpb-radius, 12px);
     text-align: var(--fpb-text-align, left);
+}
+@keyframes fpb-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+@keyframes fpb-slide-up {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fpb-zoom-in {
+    from { opacity: 0; transform: scale(0.94); }
+    to { opacity: 1; transform: scale(1); }
+}
+.fpb-anim-fade { animation: fpb-fade-in 0.6s ease both; }
+.fpb-anim-slide-up { animation: fpb-slide-up 0.6s ease both; }
+.fpb-anim-zoom { animation: fpb-zoom-in 0.5s ease both; }
+.fpb-sticky-top {
+    position: sticky;
+    top: var(--fpb-sticky-offset, 0px);
+    z-index: 100;
+}
+@container fpb-canvas (min-width: 1025px) {
+    .fpb-hide-desktop { display: none !important; }
+}
+@container fpb-canvas (min-width: 768px) and (max-width: 1024px) {
+    .fpb-hide-tablet { display: none !important; }
+}
+@container fpb-canvas (max-width: 767px) {
+    .fpb-hide-mobile { display: none !important; }
+}
+@media (min-width: 1025px) {
+    .fpb-hide-desktop { display: none !important; }
+}
+@media (min-width: 768px) and (max-width: 1024px) {
+    .fpb-hide-tablet { display: none !important; }
+}
+@media (max-width: 767px) {
+    .fpb-hide-mobile { display: none !important; }
 }
 CSS;
     }

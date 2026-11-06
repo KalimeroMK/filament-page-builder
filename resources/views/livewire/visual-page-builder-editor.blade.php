@@ -417,11 +417,39 @@
                                 >
                                     Restore
                                 </button>
+                                <button
+                                    type="button"
+                                    wire:click="compareRevision({{ (int) $rev->id }})"
+                                    style="padding: 5px 10px; font-size: 11px; font-weight: 600; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; border-radius: 4px; cursor: pointer;"
+                                >
+                                    Compare
+                                </button>
                             </div>
                         @empty
                             <div style="font-size: 12px; color: #64748b;">No published revisions yet. Click Publish to create v1.</div>
                         @endforelse
                     </div>
+
+                    @if($revisionDiff !== null)
+                        <div style="margin-top: 14px; padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                                <strong style="font-size: 12px;">Diff vs Revision #{{ $compareRevisionId }}</strong>
+                                <button type="button" wire:click="clearRevisionComparison" style="border: 0; background: transparent; color: #64748b; cursor: pointer; font-size: 11px;">Close</button>
+                            </div>
+                            <div style="font-size: 12px; margin-bottom: 8px;">
+                                <span style="color: #16a34a;">+{{ $revisionDiff['added'] }} added</span> ·
+                                <span style="color: #dc2626;">-{{ $revisionDiff['removed'] }} removed</span> ·
+                                <span style="color: #d97706;">~{{ $revisionDiff['changed'] }} changed</span> ·
+                                <span style="color: #64748b;">{{ $revisionDiff['unchanged'] }} unchanged</span>
+                            </div>
+                            @foreach($revisionDiff['by_type'] as $type => $counts)
+                                <div style="font-size: 11px; color: #475569;">
+                                    <strong>{{ $type }}</strong>:
+                                    +{{ $counts['added'] }} / -{{ $counts['removed'] }} / ~{{ $counts['changed'] }}
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
                 @endif
 
                 {{-- TAB 5: Page Settings & SEO --}}

@@ -60,18 +60,26 @@ class IconWidget extends AbstractWidget
             Select::make('icon')
                 ->label('Icon')
                 ->searchable()
-                ->options([
-                    'heroicon-o-star' => 'Star',
-                    'heroicon-o-sparkles' => 'Sparkles',
-                    'heroicon-o-bolt' => 'Bolt',
-                    'heroicon-o-heart' => 'Heart',
-                    'heroicon-o-check-badge' => 'Check Badge',
-                    'heroicon-o-shield-check' => 'Shield Check',
-                    'heroicon-o-rocket-launch' => 'Rocket Launch',
-                    'heroicon-o-globe-alt' => 'Globe',
-                    'heroicon-o-light-bulb' => 'Light Bulb',
-                    'heroicon-o-fire' => 'Fire',
-                ])
+                ->options(function (): array {
+                    $defaults = [
+                        'heroicon-o-star' => 'Star',
+                        'heroicon-o-sparkles' => 'Sparkles',
+                        'heroicon-o-bolt' => 'Bolt',
+                        'heroicon-o-heart' => 'Heart',
+                        'heroicon-o-check-badge' => 'Check Badge',
+                        'heroicon-o-shield-check' => 'Shield Check',
+                        'heroicon-o-rocket-launch' => 'Rocket Launch',
+                        'heroicon-o-globe-alt' => 'Globe',
+                        'heroicon-o-light-bulb' => 'Light Bulb',
+                        'heroicon-o-fire' => 'Fire',
+                    ];
+
+                    foreach (app(\KalimeroMK\FilamentPageBuilder\Services\CustomAssetsService::class)->customIcons() as $name => $svg) {
+                        $defaults['custom:' . $name] = 'Custom: ' . $name;
+                    }
+
+                    return $defaults;
+                })
                 ->default('heroicon-o-star')
                 ->required(),
             Grid::make(2)->schema([

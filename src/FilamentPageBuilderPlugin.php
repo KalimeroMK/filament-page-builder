@@ -109,6 +109,7 @@ class FilamentPageBuilderPlugin implements Plugin
 
         $panel->resources([
             \KalimeroMK\FilamentPageBuilder\Filament\Resources\FormSubmissionResource::class,
+            \KalimeroMK\FilamentPageBuilder\Filament\Resources\MenuResource::class,
         ]);
     }
 

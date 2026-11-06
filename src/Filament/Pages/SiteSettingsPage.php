@@ -6,6 +6,7 @@ namespace KalimeroMK\FilamentPageBuilder\Filament\Pages;
 
 use Filament\Facades\Filament;
 use Filament\Forms\Components\ColorPicker;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
@@ -33,6 +34,11 @@ class SiteSettingsPage extends Page implements HasSchemas
     public static function getNavigationIcon(): string
     {
         return 'heroicon-o-adjustments-horizontal';
+    }
+
+    public static function canAccess(): bool
+    {
+        return \KalimeroMK\FilamentPageBuilder\Support\PageBuilderAuthorizer::can('settings');
     }
 
     public static function getNavigationLabel(): string
@@ -72,6 +78,7 @@ class SiteSettingsPage extends Page implements HasSchemas
     public function mount(): void
     {
         $this->data = app(SiteStyleService::class)->values();
+        $this->data['custom_fonts'] = app(\KalimeroMK\FilamentPageBuilder\Services\CustomAssetsService::class)->customFonts();
     }
 
     public function form(Schema $schema): Schema
@@ -119,19 +126,45 @@ class SiteSettingsPage extends Page implements HasSchemas
                         ]),
                         Select::make('font_family')
                             ->label('Font Family')
-                            ->options([
-                                'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif' => 'System UI (default)',
-                                'Arial, Helvetica, sans-serif' => 'Arial / Helvetica',
-                                'Georgia, "Times New Roman", serif' => 'Georgia (Serif)',
-                                '"Courier New", Courier, monospace' => 'Courier New (Monospace)',
-                            ])
+                            ->options(function (): array {
+                                $options = [
+                                    'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif' => 'System UI (default)',
+                                    'Arial, Helvetica, sans-serif' => 'Arial / Helvetica',
+                                    'Georgia, "Times New Roman", serif' => 'Georgia (Serif)',
+                                    '"Courier New", Courier, monospace' => 'Courier New (Monospace)',
+                                ];
+
+                                foreach (app(\KalimeroMK\FilamentPageBuilder\Services\CustomAssetsService::class)->customFontFamilies() as $family) {
+                                    $options[$family] = $family . ' (custom)';
+                                }
+
+                                return $options;
+                            })
                             ->required(),
+                    ]),
+                Section::make('Custom Fonts')
+                    ->description('Register custom font families loaded from HTTPS CSS/font URLs (@font-face).')
+                    ->schema([
+                        Repeater::make('custom_fonts')
+                            ->label('Fonts')
+                            ->schema([
+                                Grid::make(2)->schema([
+                                    TextInput::make('family')
+                                        ->label('Font Family Name')
+                                        ->required(),
+                                    TextInput::make('css_url')
+                                        ->label('Font CSS/File URL (https)')
+                                        ->required(),
+                                ]),
+                            ]),
                     ]),
             ]);
     }
 
     public function save(): void
     {
+        abort_unless(\KalimeroMK\FilamentPageBuilder\Support\PageBuilderAuthorizer::can('settings'), 403);
+
         $state = $this->form->getState();
 
         $allowed = array_keys(SiteStyleService::defaults());
@@ -144,6 +177,11 @@ class SiteSettingsPage extends Page implements HasSchemas
         }
 
         app(SiteStyleService::class)->save($values);
+
+        $customFonts = $this->data['custom_fonts'] ?? [];
+        if (is_array($customFonts)) {
+            app(\KalimeroMK\FilamentPageBuilder\Services\CustomAssetsService::class)->saveFonts($customFonts);
+        }
 
         Notification::make()
             ->title('Global site settings saved')

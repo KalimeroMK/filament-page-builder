@@ -39,6 +39,26 @@ class PageResource extends Resource
 {
     protected static ?string $recordTitleAttribute = 'title';
 
+    public static function canAccess(): bool
+    {
+        return \KalimeroMK\FilamentPageBuilder\Support\PageBuilderAuthorizer::can('pages');
+    }
+
+    public static function canCreate(): bool
+    {
+        return \KalimeroMK\FilamentPageBuilder\Support\PageBuilderAuthorizer::can('pages');
+    }
+
+    public static function canEdit(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return \KalimeroMK\FilamentPageBuilder\Support\PageBuilderAuthorizer::can('pages');
+    }
+
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return \KalimeroMK\FilamentPageBuilder\Support\PageBuilderAuthorizer::can('pages');
+    }
+
     public static function getModel(): string
     {
         /** @var class-string<Page> $model */
@@ -50,6 +70,11 @@ class PageResource extends Resource
     public static function getNavigationIcon(): string
     {
         return 'heroicon-o-document-duplicate';
+    }
+
+    public static function canViewAny(): bool
+    {
+        return \KalimeroMK\FilamentPageBuilder\Support\PageBuilderAuthorizer::can('pages');
     }
 
     public static function getNavigationLabel(): string

@@ -31,6 +31,7 @@ use KalimeroMK\FilamentPageBuilder\Widgets\StarRatingWidget;
 use KalimeroMK\FilamentPageBuilder\Widgets\GoogleMapsWidget;
 use KalimeroMK\FilamentPageBuilder\Widgets\FlipBoxWidget;
 use KalimeroMK\FilamentPageBuilder\Widgets\CtaWidget;
+use KalimeroMK\FilamentPageBuilder\Widgets\NavMenuWidget;
 
 return [
     /*
@@ -45,6 +46,7 @@ return [
         'theme_template' => \KalimeroMK\FilamentPageBuilder\Models\ThemeTemplate::class,
         'form_submission' => \KalimeroMK\FilamentPageBuilder\Models\FormSubmission::class,
         'popup' => \KalimeroMK\FilamentPageBuilder\Models\Popup::class,
+        'menu' => \KalimeroMK\FilamentPageBuilder\Models\Menu::class,
     ],
 
     /*
@@ -60,6 +62,7 @@ return [
         'form_submissions' => 'fpb_form_submissions',
         'popups' => 'fpb_popups',
         'settings' => 'fpb_settings',
+        'menus' => 'fpb_menus',
     ],
 
     /*
@@ -146,6 +149,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Authorization (Role Manager)
+    |--------------------------------------------------------------------------
+    | Optional closure: fn ($user, string $area): bool
+    | Areas: pages, theme_templates, menus, submissions, settings, builder
+    */
+    'authorization' => [
+        'access_callback' => null,
+        'default_allow' => true,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Core Registered Widgets
     |--------------------------------------------------------------------------
     */
@@ -176,5 +191,6 @@ return [
         GoogleMapsWidget::class,
         FlipBoxWidget::class,
         CtaWidget::class,
+        NavMenuWidget::class,
     ],
 ];

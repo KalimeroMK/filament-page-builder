@@ -43,6 +43,7 @@ class FilamentPageBuilderServiceProvider extends PackageServiceProvider
                 'create_fpb_form_submissions_table',
                 'create_fpb_popups_table',
                 'create_fpb_settings_table',
+                'create_fpb_menus_table',
             ]);
     }
 
@@ -98,6 +99,21 @@ class FilamentPageBuilderServiceProvider extends PackageServiceProvider
         $this->registerCoreFormActions();
         $this->registerLivewireComponents();
         $this->registerBladeDirectives();
+        $this->registerAuthorizationGate();
+    }
+
+    protected function registerAuthorizationGate(): void
+    {
+        \Illuminate\Support\Facades\Gate::define('fpb.access_builder', function ($user = null, ...$arguments): bool {
+            $area = $arguments[0] ?? 'builder';
+            $callback = config('filament-page-builder.authorization.access_callback');
+
+            if ($callback instanceof \Closure) {
+                return (bool) $callback($user, $area);
+            }
+
+            return true;
+        });
     }
 
     protected function registerCoreFormActions(): void

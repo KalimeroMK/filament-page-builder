@@ -113,6 +113,16 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
 
     public string $importJsonPayload = '';
 
+    /**
+     * Currently compared revision ID and its diff result against the current editor schema.
+     */
+    public ?int $compareRevisionId = null;
+
+    /**
+     * @var array{added: int, removed: int, changed: int, unchanged: int, by_type: array<string, array{added: int, removed: int, changed: int}>, changed_ids: array<int, string>}|null
+     */
+    public ?array $revisionDiff = null;
+
     #[Locked]
     public bool $hasUnsavedEditorChanges = false;
 
@@ -491,6 +501,30 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
             ->title("Restored Revision #{$revision->version_number} into Draft")
             ->info()
             ->send();
+    }
+
+    /**
+     * Compare a historical revision against the current editor schema (added/removed/changed elements).
+     */
+    public function compareRevision(int $revisionId): void
+    {
+        $page = $this->page;
+        $this->authorizePageAccess($page);
+
+        /** @var PageRevision $revision */
+        $revision = $page->revisions()->findOrFail($revisionId);
+
+        $oldElements = \KalimeroMK\FilamentPageBuilder\Models\Page::normalizeSchema($revision->schema_snapshot)['elements'];
+
+        $this->compareRevisionId = $revisionId;
+        $this->revisionDiff = app(\KalimeroMK\FilamentPageBuilder\Services\SchemaDiffService::class)
+            ->compare($oldElements, $this->schema['elements']);
+    }
+
+    public function clearRevisionComparison(): void
+    {
+        $this->compareRevisionId = null;
+        $this->revisionDiff = null;
     }
 
     /**

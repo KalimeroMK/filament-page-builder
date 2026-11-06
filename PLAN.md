@@ -1,7 +1,7 @@
 # Filament Page Builder — План за фичери и Архитектура (v2.0)
 
 > **Цел:** Бесплатен, open-source (MIT) Filament v5 плагин што го реплицира начинот на работа и фичерите на **Elementor Pro** — визуелен page builder за Laravel без кодирање.
-> **Монетизација подоцна:** Платени add-on плагини по моделот на Crocoblock (јадрото останува бесплатно засекогаш).
+> **Лиценца:** Сите фичери се и остануваат **бесплатни и open-source (MIT)** — нема платена верзија, нема заклучени фичери.
 > **Референца:** Elementor Pro + Crocoblock — се користат само како функционална/UX референца, целиот код се пишува од нула.
 
 ---
@@ -234,7 +234,7 @@
 | **v1.2** 📋 | **Nav Menu widget + Off-canvas mobile menu**, **Motion Effects & Sticky** (fade/slide/parallax), **Device visibility** (`hide_on_desktop/tablet/mobile`), **Custom Fonts & Icons**, **Role Manager** (Gate policies), **Revision diff/compare** |  |
 | **v1.3+** 📋 | **Full Site Kit import/export** (ZIP/JSON), **Loop Carousel**, **AJAX pagination/филтри за Loop**, **Maintenance / Coming Soon mode**, **Finder (Ctrl+K)** во едиторот |  |
 
-**Платени add-ons (core останува MIT):** e-commerce widgets (Lunar/Bagisto/Cashier), CRM & newsletter integrations (Mailchimp, HubSpot), advanced motion effects, template cloud library, A/B testing.
+**Планирани бесплатни add-ons (исто MIT):** e-commerce widgets (Lunar/Bagisto/Cashier), CRM & newsletter integrations (Mailchimp, HubSpot), advanced motion effects, template cloud library, A/B testing — сите објавени бесплатно.
 
 ---
 

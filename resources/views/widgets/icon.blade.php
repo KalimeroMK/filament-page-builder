@@ -4,7 +4,13 @@
     $link = $rawLink !== '' ? \KalimeroMK\FilamentPageBuilder\Support\HtmlSanitizer::sanitizeUrl($rawLink, '') : '';
     $openInNewTab = ! empty($settings['open_in_new_tab']);
     try {
-        $svgHtml = svg($iconName)->toHtml();
+        if (str_starts_with($iconName, 'custom:')) {
+            $customName = substr($iconName, 7);
+            $svgHtml = app(\KalimeroMK\FilamentPageBuilder\Services\CustomAssetsService::class)->customIcons()[$customName]
+                ?? svg('heroicon-o-star')->toHtml();
+        } else {
+            $svgHtml = svg($iconName)->toHtml();
+        }
     } catch (\Throwable) {
         $svgHtml = svg('heroicon-o-star')->toHtml();
     }

@@ -9,7 +9,7 @@
 
 Give your clients, editors and marketers a **drag-and-drop visual builder** inside your existing Laravel + Filament admin panel. They design pages, headers, footers, popups and forms visually — you keep full control of the code, the data and the rendering.
 
-Built and maintained by [KalimeroMK](https://github.com/KalimeroMK) • Core stays **free & open-source forever** (paid add-ons later, Crocoblock-style).
+Built and maintained by [KalimeroMK](https://github.com/KalimeroMK) • **All features are and remain free & open-source (MIT) — no paid version, no locked features.**
 
 ---
 
@@ -472,9 +472,9 @@ No — it complements them. Your Eloquent models and Resources remain the source
 Yes. Configure `layouts` in the config or override the published views. The `canvas` layout renders without header/footer (Elementor Canvas-style).
 
 **Will the core become paid?**
-No. The core stays MIT forever. Future revenue comes from optional add-ons (e-commerce widgets, integrations, template cloud), exactly like Crocoblock's model.
+No. Everything is and stays MIT forever — there is no paid version and no locked features. Future add-ons (e-commerce widgets, integrations, template cloud) will also be published free and open-source.
 
-## Roadmap & monetization
+## Roadmap (100% free & open-source)
 
 - [x] v0.1 — JSON schema, renderer, Draft/Preview/Publish, 4 widgets
 - [x] v0.2 — Livewire v4 visual editor, drag & drop, 4 more widgets
@@ -484,8 +484,9 @@ No. The core stays MIT forever. Future revenue comes from optional add-ons (e-co
 - [x] v0.6 — Form Builder with pluggable actions
 - [x] v0.7 — Popup Builder + conditional/multi-step forms + Turnstile
 - [x] v1.0 — Documentation, test suite, stable release
+- [x] v1.1 — Global Site Settings, Global Widget, Custom CSS/Attributes, Custom 404, Submissions admin, Autoresponder, 9 new widgets
 
-**Planned paid add-ons (core stays free):** e-commerce widgets (Lunar/Bagisto/Cashier), CRM & newsletter integrations (Mailchimp, HubSpot), advanced motion effects, template cloud library, A/B testing.
+**Planned free add-ons (also MIT):** e-commerce widgets (Lunar/Bagisto/Cashier), CRM & newsletter integrations (Mailchimp, HubSpot), advanced motion effects, template cloud library, A/B testing — all published for free.
 
 ## Contributing & License
 

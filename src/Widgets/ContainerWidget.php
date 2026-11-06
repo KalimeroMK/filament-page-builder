@@ -50,7 +50,7 @@ class ContainerWidget extends AbstractWidget
             'align_items' => 'stretch',
             'justify_content' => 'flex-start',
             'max_width' => '100%',
-            'background_color' => 'transparent',
+            'background_color' => null,
             'border_radius' => 0,
             'padding' => 24,
         ]);
@@ -80,18 +80,28 @@ class ContainerWidget extends AbstractWidget
         ];
 
         return [
-            Select::make('html_tag')
-                ->label('HTML Tag')
-                ->options([
-                    'div' => 'div',
-                    'section' => 'section',
-                    'header' => 'header',
-                    'footer' => 'footer',
-                    'main' => 'main',
-                    'article' => 'article',
-                    'aside' => 'aside',
-                ])
-                ->default('div'),
+            Grid::make(2)->schema([
+                Select::make('html_tag')
+                    ->label('HTML Tag')
+                    ->options([
+                        'div' => 'div',
+                        'section' => 'section',
+                        'header' => 'header',
+                        'footer' => 'footer',
+                        'main' => 'main',
+                        'article' => 'article',
+                        'aside' => 'aside',
+                    ])
+                    ->default('div'),
+                Select::make('wrap')
+                    ->label('Flex Wrap')
+                    ->options([
+                        'nowrap' => 'No Wrap',
+                        'wrap' => 'Wrap',
+                        'wrap-reverse' => 'Wrap Reverse',
+                    ])
+                    ->default('nowrap'),
+            ]),
             Grid::make(3)->schema([
                 Select::make('direction')
                     ->label('Direction (Desktop)')

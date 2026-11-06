@@ -6,20 +6,27 @@ namespace KalimeroMK\FilamentPageBuilder\Livewire;
 
 use Filament\Notifications\Notification;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
+use Filament\Schemas\Concerns\RestrictsFileUploadsToSchemaComponents;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Schemas\Schema;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 use KalimeroMK\FilamentPageBuilder\Models\Page;
 use KalimeroMK\FilamentPageBuilder\Registries\WidgetRegistry;
 use KalimeroMK\FilamentPageBuilder\Rendering\CssGenerator;
 use KalimeroMK\FilamentPageBuilder\Rendering\PageRenderer;
+use KalimeroMK\FilamentPageBuilder\Support\HtmlSanitizer;
 use KalimeroMK\FilamentPageBuilder\Support\SchemaTreeManipulator;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 class VisualPageBuilderEditor extends Component implements HasSchemas
 {
     use InteractsWithSchemas;
+    use RestrictsFileUploadsToSchemaComponents;
 
+    #[Locked]
     public int | string $pageId;
 
     /**
@@ -66,6 +73,8 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
     {
         $record = $page instanceof Page ? $page : $this->resolvePageModel()::query()->findOrFail($page);
 
+        $this->authorizePageAccess($record);
+
         $this->pageId = $record->getKey();
         $this->schema = $record->getWorkingSchema();
         $this->fillPageSettingsFromRecord($record);
@@ -77,6 +86,13 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
         $record = $this->resolvePageModel()::query()->findOrFail($this->pageId);
 
         return $record;
+    }
+
+    protected function authorizePageAccess(Page $page): void
+    {
+        if (Gate::getPolicyFor($page) !== null) {
+            Gate::authorize('update', $page);
+        }
     }
 
     protected function fillPageSettingsFromRecord(Page $record): void
@@ -109,7 +125,9 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
      */
     public function inspectorSchema(Schema $schema): Schema
     {
-        $schema->statePath('inspectorData');
+        $schema
+            ->statePath('inspectorData')
+            ->live(debounce: 250);
 
         if ($this->activeElementId === null) {
             return $schema->components([]);
@@ -150,12 +168,20 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
 
         $this->inspectorData = array_merge($defaults, $currentSettings);
         $this->leftTab = 'inspector';
+        $this->clearCachedInspectorSchema();
+    }
+
+    protected function clearCachedInspectorSchema(): void
+    {
+        if (property_exists($this, 'cachedSchemas') && is_array($this->cachedSchemas)) {
+            unset($this->cachedSchemas['inspectorSchema']);
+        }
     }
 
     /**
      * Automatically sync any change in `$inspectorData` back into the active element in `$this->schema`.
      */
-    public function updatedInspectorData(): void
+    public function updatedInspectorData(mixed $value = null, ?string $key = null): void
     {
         if ($this->activeElementId === null) {
             return;
@@ -167,6 +193,11 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
             $this->inspectorData,
         );
 
+        $this->hasUnsavedEditorChanges = true;
+    }
+
+    public function updatedPageSettingsData(): void
+    {
         $this->hasUnsavedEditorChanges = true;
     }
 
@@ -210,7 +241,9 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
 
         if ($containerId !== null) {
             $parentEl = SchemaTreeManipulator::findElement($this->schema['elements'], $containerId);
-            if ($parentEl === null || ($parentEl['type'] ?? '') !== 'container') {
+            $parentWidget = $parentEl !== null ? $registry->get((string) ($parentEl['type'] ?? '')) : null;
+
+            if ($parentWidget === null || ! $parentWidget::isContainer()) {
                 $containerId = null;
             }
         }
@@ -230,7 +263,18 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
 
     public function setTargetContainer(?string $containerId): void
     {
-        $this->targetContainerId = $containerId;
+        if ($containerId === null || $containerId === '') {
+            $this->targetContainerId = null;
+
+            return;
+        }
+
+        $parentEl = SchemaTreeManipulator::findElement($this->schema['elements'], $containerId);
+        $parentWidget = $parentEl !== null ? app(WidgetRegistry::class)->get((string) ($parentEl['type'] ?? '')) : null;
+
+        if ($parentWidget !== null && $parentWidget::isContainer()) {
+            $this->targetContainerId = $containerId;
+        }
     }
 
     public function moveElementUp(string $elementId): void
@@ -261,19 +305,26 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
         $this->schema['elements'] = SchemaTreeManipulator::removeElement($this->schema['elements'], $elementId);
         $this->hasUnsavedEditorChanges = true;
 
-        if ($this->activeElementId === $elementId) {
+        if (
+            $this->activeElementId !== null &&
+            SchemaTreeManipulator::findElement($this->schema['elements'], $this->activeElementId) === null
+        ) {
             $this->activeElementId = null;
             $this->inspectorData = [];
             $this->leftTab = 'widgets';
+            $this->clearCachedInspectorSchema();
         }
 
-        if ($this->targetContainerId === $elementId) {
+        if (
+            $this->targetContainerId !== null &&
+            SchemaTreeManipulator::findElement($this->schema['elements'], $this->targetContainerId) === null
+        ) {
             $this->targetContainerId = null;
         }
     }
 
     /**
-     * Called by Drag & Drop (SortableJS / HTML5 drag-and-drop) to reorder siblings.
+     * Called by Drag & Drop to reorder siblings.
      *
      * @param  array<int, string>  $orderedIds
      */
@@ -308,15 +359,37 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
     public function saveDraft(): void
     {
         $page = $this->page;
+        $this->authorizePageAccess($page);
 
-        $page->title = trim((string) ($this->pageSettingsData['title'] ?? $page->title)) ?: $page->title;
-        $page->slug = trim((string) ($this->pageSettingsData['slug'] ?? $page->slug)) ?: $page->slug;
-        $page->layout = (string) ($this->pageSettingsData['layout'] ?? $page->layout ?? 'default');
+        $allowedLayouts = array_keys((array) config('filament-page-builder.layouts', ['default' => 'default']));
+
+        $this->validate([
+            'pageSettingsData.title' => ['required', 'string', 'max:255'],
+            'pageSettingsData.slug' => [
+                'required',
+                'string',
+                'max:255',
+                'regex:/^[A-Za-z0-9\-_]+(?:\/[A-Za-z0-9\-_]+)*$/',
+                Rule::unique($page->getTable(), 'slug')->ignore($page->getKey()),
+            ],
+            'pageSettingsData.layout' => ['required', 'string', Rule::in($allowedLayouts)],
+            'pageSettingsData.meta_title' => ['nullable', 'string', 'max:255'],
+            'pageSettingsData.meta_description' => ['nullable', 'string', 'max:1000'],
+            'pageSettingsData.og_image' => ['nullable', 'string', 'max:2048'],
+            'pageSettingsData.noindex' => ['boolean'],
+        ]);
+
+        $page->title = trim((string) $this->pageSettingsData['title']);
+        $page->slug = trim((string) $this->pageSettingsData['slug']);
+        $page->layout = (string) $this->pageSettingsData['layout'];
+
+        $rawOgImage = trim((string) ($this->pageSettingsData['og_image'] ?? ''));
+        $safeOgImage = $rawOgImage !== '' ? HtmlSanitizer::sanitizeUrl($rawOgImage, '') : '';
 
         $meta = [
             'meta_title' => (string) ($this->pageSettingsData['meta_title'] ?? ''),
             'meta_description' => (string) ($this->pageSettingsData['meta_description'] ?? ''),
-            'og_image' => (string) ($this->pageSettingsData['og_image'] ?? ''),
+            'og_image' => $safeOgImage,
             'noindex' => (bool) ($this->pageSettingsData['noindex'] ?? false),
         ];
 
@@ -351,10 +424,16 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
      */
     public function discardDraft(): void
     {
-        $page = $this->page->discardDraft();
+        $page = $this->page;
+        $this->authorizePageAccess($page);
+
+        $page = $page->discardDraft();
         $this->schema = $page->getWorkingSchema();
+        $this->fillPageSettingsFromRecord($page);
         $this->activeElementId = null;
+        $this->targetContainerId = null;
         $this->inspectorData = [];
+        $this->clearCachedInspectorSchema();
         $this->hasUnsavedEditorChanges = false;
 
         Notification::make()

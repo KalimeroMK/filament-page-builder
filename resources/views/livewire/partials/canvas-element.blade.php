@@ -1,6 +1,9 @@
 @php
-    $elId = (string) ($element['id'] ?? '');
-    $elType = (string) ($element['type'] ?? '');
+    $elId = preg_replace('/[^a-zA-Z0-9_-]/', '', (string) ($element['id'] ?? '')) ?: 'el';
+    $elType = preg_replace('/[^a-zA-Z0-9_-]/', '', (string) ($element['type'] ?? '')) ?: 'widget';
+    $parentSafeId = isset($parentContainerId) && $parentContainerId !== null
+        ? (preg_replace('/[^a-zA-Z0-9_-]/', '', (string) $parentContainerId) ?: null)
+        : null;
     $isSelected = $activeElementId === $elId;
     $isTargetContainer = $targetContainerId === $elId;
     $registry = app(\KalimeroMK\FilamentPageBuilder\Registries\WidgetRegistry::class);
@@ -12,11 +15,9 @@
     wire:key="canvas-el-{{ $elId }}"
     draggable="true"
     x-on:dragstart="handleElementDragStart($event, '{{ $elId }}')"
+    x-on:dragover.prevent
+    x-on:drop="handleDropOnElement($event, '{{ $elId }}', @js($parentSafeId), @js($siblingIds ?? []))"
     wire:click.stop="selectElement('{{ $elId }}')"
-    @if($isContainer)
-        x-on:dragover.prevent
-        x-on:drop="handleDropOnContainer($event, '{{ $elId }}')"
-    @endif
     style="position: relative; outline: {{ $isSelected ? '2px solid #2563eb' : ($isContainer ? '1px dashed #94a3b8' : '1px solid transparent') }}; outline-offset: 2px; border-radius: 4px; margin-bottom: 8px; cursor: pointer; transition: outline-color 0.12s;"
 >
     {{-- Element Floating Badge & Quick Actions --}}
@@ -39,11 +40,24 @@
 
     {{-- Element Content Preview --}}
     @if($isContainer)
-        <div class="fpb-element fpb-container fpb-el-{{ $elId }}" style="min-height: 56px; padding: 12px;">
+        <div
+            class="fpb-element fpb-container fpb-el-{{ $elId }}"
+            style="min-height: 56px;"
+            x-on:dragover.prevent
+            x-on:drop="handleDropOnContainer($event, '{{ $elId }}')"
+        >
             @if(!empty($element['children']) && is_array($element['children']))
+                @php
+                    $childSiblingIds = array_values(array_map(
+                        fn (array $child): string => preg_replace('/[^a-zA-Z0-9_-]/', '', (string) ($child['id'] ?? '')) ?: 'el',
+                        array_filter($element['children'], 'is_array')
+                    ));
+                @endphp
                 @foreach($element['children'] as $child)
                     @include('filament-page-builder::livewire.partials.canvas-element', [
                         'element' => $child,
+                        'parentContainerId' => $elId,
+                        'siblingIds' => $childSiblingIds,
                         'activeElementId' => $activeElementId,
                         'targetContainerId' => $targetContainerId,
                     ])

@@ -91,7 +91,12 @@ class TextWidget extends AbstractWidget
 
     public function render(array $element, array $settings, string $childrenHtml = '', array $context = []): string
     {
-        $settings['sanitized_content'] = HtmlSanitizer::clean((string) ($settings['content'] ?? ''));
+        $rawContent = $settings['content'] ?? '';
+        if (is_array($rawContent)) {
+            $rawContent = \Filament\Forms\Components\RichEditor\RichContentRenderer::make($rawContent)->toHtml();
+        }
+
+        $settings['sanitized_content'] = HtmlSanitizer::clean((string) $rawContent);
 
         return parent::render($element, $settings, $childrenHtml, $context);
     }

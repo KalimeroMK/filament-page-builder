@@ -2,13 +2,12 @@
 
 declare(strict_types=1);
 
-use KalimeroMK\FilamentPageBuilder\Enums\PageStatus;
 use KalimeroMK\FilamentPageBuilder\Facades\PageBuilder;
 use KalimeroMK\FilamentPageBuilder\Livewire\VisualPageBuilderEditor;
 use KalimeroMK\FilamentPageBuilder\Models\Page;
 use Livewire\Livewire;
 
-it('registers and renders all v0.2 widgets (image, spacer, icon, video)', function (): void {
+it('registers and renders all v0.2 widgets (image, spacer, icon, video with YouTube loop playlist)', function (): void {
     $registry = PageBuilder::widgets();
 
     expect($registry->has('image'))->toBeTrue()
@@ -57,6 +56,7 @@ it('registers and renders all v0.2 widgets (image, spacer, icon, video)', functi
                     'url' => 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
                     'autoplay' => true,
                     'mute' => true,
+                    'loop' => true,
                 ],
             ],
         ],
@@ -68,7 +68,7 @@ it('registers and renders all v0.2 widgets (image, spacer, icon, video)', functi
         ->toContain('Слика за промоција')
         ->toContain('class="fpb-spacer-line"')
         ->toContain('<svg')
-        ->toContain('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=1&amp;mute=1');
+        ->toContain('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=1&amp;mute=1&amp;loop=1&amp;controls=1&amp;playlist=dQw4w9WgXcQ');
 
     expect($rendered->css)
         ->toContain('.fpb-el-spc_1 {')
@@ -168,4 +168,21 @@ it('builds pages interactively in VisualPageBuilderEditor with drag-and-drop reo
     $page->refresh();
     expect($page->hasUnpublishedChanges())->toBeFalse()
         ->and(count($page->getWorkingSchema()['elements'][0]['children']))->toBe(2);
+
+    // 8. Deleting an ancestor container while a child is selected clears activeElementId and targetContainerId
+    $component->call('selectElement', $headingId)
+        ->assertSet('activeElementId', $headingId)
+        ->call('removeElement', $rootContainerId)
+        ->assertSet('activeElementId', null)
+        ->assertSet('targetContainerId', null);
+});
+
+it('validates duplicate or invalid slugs in VisualPageBuilderEditor::saveDraft()', function (): void {
+    Page::create(['title' => 'Existing', 'slug' => 'existing-slug']);
+    $page = Page::create(['title' => 'Second', 'slug' => 'second-slug']);
+
+    Livewire::test(VisualPageBuilderEditor::class, ['page' => $page])
+        ->set('pageSettingsData.slug', 'existing-slug')
+        ->call('saveDraft')
+        ->assertHasErrors(['pageSettingsData.slug']);
 });

@@ -112,7 +112,7 @@ class PageRenderer
         $id = filled($element['id'] ?? null) ? (string) $element['id'] : $id;
         $element['id'] = $id;
 
-        if (! empty($settings['hide_element'])) {
+        if (! empty($settings['hide_element']) && empty($context['is_editor'])) {
             return '';
         }
 

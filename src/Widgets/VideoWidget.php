@@ -130,6 +130,10 @@ class VideoWidget extends AbstractWidget
                     'controls' => ! isset($settings['controls']) || ! empty($settings['controls']) ? '1' : '0',
                 ];
 
+                if (! empty($settings['loop'])) {
+                    $params['playlist'] = $videoId;
+                }
+
                 return "https://www.youtube-nocookie.com/embed/{$videoId}?" . http_build_query($params);
             }
 
@@ -143,6 +147,7 @@ class VideoWidget extends AbstractWidget
                     'autoplay' => ! empty($settings['autoplay']) ? '1' : '0',
                     'muted' => ! empty($settings['mute']) ? '1' : '0',
                     'loop' => ! empty($settings['loop']) ? '1' : '0',
+                    'controls' => ! isset($settings['controls']) || ! empty($settings['controls']) ? '1' : '0',
                 ];
 
                 return "https://player.vimeo.com/video/{$videoId}?" . http_build_query($params);

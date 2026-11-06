@@ -196,6 +196,7 @@ class PageResource extends Resource
                     ->label('Visual Builder')
                     ->icon('heroicon-o-squares-plus')
                     ->color('primary')
+                    ->visible(fn (Page $record): bool => static::canEdit($record))
                     ->url(fn (Page $record): string => static::getUrl('builder', ['record' => $record])),
                 Action::make('preview')
                     ->label('Preview Draft')
@@ -206,6 +207,8 @@ class PageResource extends Resource
                     ->label('Publish')
                     ->icon('heroicon-o-rocket-launch')
                     ->color('success')
+                    ->visible(fn (Page $record): bool => static::canEdit($record))
+                    ->authorize(fn (Page $record): bool => static::canEdit($record))
                     ->requiresConfirmation()
                     ->action(function (Page $record): void {
                         $record->publish();

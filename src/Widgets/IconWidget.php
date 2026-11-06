@@ -37,8 +37,8 @@ class IconWidget extends AbstractWidget
             'icon_size_tablet' => null,
             'icon_size_mobile' => null,
             'icon_color' => '#2563eb',
-            'background_color' => 'transparent',
-            'border_radius' => 50,
+            'background_color' => null,
+            'border_radius' => '50%',
             'text_align' => 'center',
         ]);
     }
@@ -108,9 +108,8 @@ class IconWidget extends AbstractWidget
             ]),
             Grid::make(2)->schema([
                 TextInput::make('border_radius')
-                    ->label('Border Radius (px)')
-                    ->numeric()
-                    ->default(50),
+                    ->label('Border Radius (px or %)')
+                    ->default('50%'),
                 Select::make('text_align')
                     ->label('Alignment')
                     ->options([

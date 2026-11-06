@@ -4,6 +4,9 @@
         'mobile' => '375px',
         default => '100%',
     };
+    $activeIdSafe = $activeElement !== null
+        ? (preg_replace('/[^a-zA-Z0-9_-]/', '', (string) ($activeElement['id'] ?? '')) ?: 'el')
+        : null;
 @endphp
 <div
     class="fpb-visual-editor"
@@ -20,6 +23,21 @@
             this.draggedElementId = id;
             this.draggedWidgetType = null;
             event.dataTransfer.effectAllowed = 'move';
+        },
+        handleDropOnElement(event, targetId, parentContainerId, siblingIds) {
+            event.preventDefault();
+            event.stopPropagation();
+            if (this.draggedElementId && this.draggedElementId !== targetId && Array.isArray(siblingIds)) {
+                const fromIdx = siblingIds.indexOf(this.draggedElementId);
+                const toIdx = siblingIds.indexOf(targetId);
+                if (fromIdx !== -1 && toIdx !== -1) {
+                    const updated = [...siblingIds];
+                    const [moved] = updated.splice(fromIdx, 1);
+                    updated.splice(toIdx, 0, moved);
+                    $wire.reorderElements(updated, parentContainerId);
+                }
+                this.draggedElementId = null;
+            }
         },
         handleDropOnContainer(event, containerId) {
             event.preventDefault();
@@ -139,12 +157,13 @@
                             </div>
                             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
                                 @foreach($widgets as $type => $widget)
+                                    @php $safeType = preg_replace('/[^a-zA-Z0-9_-]/', '', (string) $type) ?: 'widget'; @endphp
                                     <button
                                         type="button"
                                         draggable="true"
-                                        x-on:dragstart="handleWidgetDragStart($event, '{{ $type }}')"
-                                        wire:click="addWidget('{{ $type }}')"
-                                        data-widget-type="{{ $type }}"
+                                        x-on:dragstart="handleWidgetDragStart($event, '{{ $safeType }}')"
+                                        wire:click="addWidget('{{ $safeType }}')"
+                                        data-widget-type="{{ $safeType }}"
                                         style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 12px 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; color: #1e293b;"
                                     >
                                         <span>{{ $widget::getLabel() }}</span>
@@ -157,23 +176,23 @@
 
                 {{-- TAB 2: Active Element Inspector (Content / Style / Advanced via Filament v5 Schema) --}}
                 @if($leftTab === 'inspector')
-                    @if($activeElement !== null)
+                    @if($activeElement !== null && $activeIdSafe !== null)
                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
                             <div>
                                 <div style="font-size: 13px; font-weight: 700; color: #0f172a;">
                                     Editing: {{ ucfirst((string) ($activeElement['type'] ?? 'Element')) }}
                                 </div>
-                                <div style="font-size: 11px; color: #64748b;">ID: {{ $activeElement['id'] }}</div>
+                                <div style="font-size: 11px; color: #64748b;">ID: {{ $activeIdSafe }}</div>
                             </div>
                             <div style="display: flex; gap: 4px;">
-                                <button type="button" wire:click="moveElementUp('{{ $activeElement['id'] }}')" title="Move Up" style="padding: 4px 8px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; cursor: pointer;">↑</button>
-                                <button type="button" wire:click="moveElementDown('{{ $activeElement['id'] }}')" title="Move Down" style="padding: 4px 8px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; cursor: pointer;">↓</button>
-                                <button type="button" wire:click="duplicateElement('{{ $activeElement['id'] }}')" title="Duplicate" style="padding: 4px 8px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; cursor: pointer;">Copy</button>
-                                <button type="button" wire:click="removeElement('{{ $activeElement['id'] }}')" title="Delete" style="padding: 4px 8px; font-size: 11px; border: 1px solid #fecaca; border-radius: 4px; background: #fef2f2; color: #dc2626; cursor: pointer;">Del</button>
+                                <button type="button" wire:click="moveElementUp('{{ $activeIdSafe }}')" title="Move Up" style="padding: 4px 8px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; cursor: pointer;">↑</button>
+                                <button type="button" wire:click="moveElementDown('{{ $activeIdSafe }}')" title="Move Down" style="padding: 4px 8px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; cursor: pointer;">↓</button>
+                                <button type="button" wire:click="duplicateElement('{{ $activeIdSafe }}')" title="Duplicate" style="padding: 4px 8px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; cursor: pointer;">Copy</button>
+                                <button type="button" wire:click="removeElement('{{ $activeIdSafe }}')" title="Delete" style="padding: 4px 8px; font-size: 11px; border: 1px solid #fecaca; border-radius: 4px; background: #fef2f2; color: #dc2626; cursor: pointer;">Del</button>
                             </div>
                         </div>
 
-                        <div wire:key="inspector-schema-{{ $activeElement['id'] }}">
+                        <div wire:key="inspector-schema-{{ $activeIdSafe }}">
                             {{ $this->inspectorSchema }}
                         </div>
                     @else
@@ -210,6 +229,16 @@
                             <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">SEO Meta Description</label>
                             <textarea rows="3" wire:model.live="pageSettingsData.meta_description" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;"></textarea>
                         </div>
+                        <div>
+                            <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">OpenGraph Image URL</label>
+                            <input type="text" wire:model.live="pageSettingsData.og_image" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;" />
+                        </div>
+                        <div>
+                            <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">
+                                <input type="checkbox" wire:model.live="pageSettingsData.noindex" />
+                                <span>Discourage search engines (noindex)</span>
+                            </label>
+                        </div>
                     </div>
                 @endif
             </div>
@@ -242,9 +271,17 @@
                         </button>
                     </div>
                 @else
+                    @php
+                        $rootSiblingIds = array_values(array_map(
+                            fn (array $el): string => preg_replace('/[^a-zA-Z0-9_-]/', '', (string) ($el['id'] ?? '')) ?: 'el',
+                            array_filter($schema['elements'], 'is_array')
+                        ));
+                    @endphp
                     @foreach($schema['elements'] as $element)
                         @include('filament-page-builder::livewire.partials.canvas-element', [
                             'element' => $element,
+                            'parentContainerId' => null,
+                            'siblingIds' => $rootSiblingIds,
                             'activeElementId' => $activeElementId,
                             'targetContainerId' => $targetContainerId,
                         ])

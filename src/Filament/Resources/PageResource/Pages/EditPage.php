@@ -77,7 +77,7 @@ class EditPage extends EditRecord
                 ->modalHeading('Publish Page')
                 ->modalDescription('This will copy the current draft into the live published page and create a version snapshot.')
                 ->action(function (): void {
-                    $this->save(shouldRedirect: false);
+                    $this->save(shouldRedirect: false, shouldSendSavedNotification: false);
                     $this->record->publish();
                     $this->refreshFormData(['status', 'published_at']);
 

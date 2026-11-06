@@ -10,7 +10,9 @@ class SchemaTreeManipulator
 {
     public static function generateElementId(string $prefix = 'el'): string
     {
-        return $prefix . '_' . Str::lower(Str::random(8));
+        $safePrefix = preg_replace('/[^a-zA-Z0-9_-]/', '', $prefix) ?: 'el';
+
+        return $safePrefix . '_' . Str::lower(Str::random(8));
     }
 
     /**

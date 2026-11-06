@@ -23,6 +23,18 @@ class VisualBuilderPage extends ResourcePage
     public function mount(int | string $record): void
     {
         $this->record = $this->resolveRecord($record);
+
+        $this->authorizeAccess();
+    }
+
+    public function hydrate(): void
+    {
+        $this->authorizeAccess();
+    }
+
+    protected function authorizeAccess(): void
+    {
+        abort_unless(static::getResource()::canEdit($this->getRecord()), 403);
     }
 
     public function getTitle(): string

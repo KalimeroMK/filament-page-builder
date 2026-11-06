@@ -1,52 +1,105 @@
 # Filament Page Builder
 
-**Open-source (MIT) visual page builder for Laravel & Filament v5** — an Elementor Pro-like drag-and-drop builder that lets your users build pages, theme layouts, popups and forms **without writing code**.
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/kalimeromk/filament-page-builder.svg?style=flat-square)](https://packagist.org/packages/kalimeromk/filament-page-builder)
+[![Total Downloads](https://img.shields.io/packagist/dt/kalimeromk/filament-page-builder.svg?style=flat-square)](https://packagist.org/packages/kalimeromk/filament-page-builder)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)](LICENSE.md)
+[![Tests](https://img.shields.io/badge/tests-31%20passing-brightgreen?style=flat-square)](#testing)
 
-Built and maintained by [KalimeroMK](https://github.com/KalimeroMK).
+> **Build pages in Laravel without writing code — an open-source (MIT) Elementor Pro-like visual page builder plugin for Filament v5.**
+
+Give your clients, editors and marketers a **drag-and-drop visual builder** inside your existing Laravel + Filament admin panel. They design pages, headers, footers, popups and forms visually — you keep full control of the code, the data and the rendering.
+
+Built and maintained by [KalimeroMK](https://github.com/KalimeroMK) • Core stays **free & open-source forever** (paid add-ons later, Crocoblock-style).
+
+---
+
+## Table of Contents
+
+1. [What is this?](#what-is-this)
+2. [Who is it for?](#who-is-it-for)
+3. [How does it work?](#how-does-it-work)
+4. [Feature overview](#feature-overview)
+5. [Requirements](#requirements)
+6. [Installation (Quick Start)](#installation-quick-start)
+7. [Your first page in 2 minutes](#your-first-page-in-2-minutes)
+8. [Usage guides](#usage-guides)
+   - [Pages & Visual Editor](#pages--visual-editor)
+   - [Theme Builder (Header / Footer / Single / Archive)](#theme-builder)
+   - [Dynamic Tags](#dynamic-tags)
+   - [Loop Builder](#loop-builder)
+   - [Form Builder](#form-builder)
+   - [Popup Builder](#popup-builder)
+9. [Configuration reference](#configuration-reference)
+10. [Add-on API (for developers)](#add-on-api-for-developers)
+11. [Security notes](#security-notes)
+12. [Testing](#testing)
+13. [FAQ](#faq)
+14. [Roadmap & monetization](#roadmap--monetization)
+15. [Contributing & License](#contributing--license)
 
 ---
 
-## Features
+## What is this?
 
-### Visual Editor (Livewire v4)
-- Drag & drop canvas with nested **Flexbox Containers**
-- Left panel: **Widgets**, **Inspector** (Content / Style / Advanced via Filament v5 `Schema`), **Navigator** (element tree), **Template Library**, **Revisions**, **SEO**
-- **Undo / Redo**, **Copy / Paste**, **Duplicate**, **Move Up/Down**, **Hide/Show** elements
-- Responsive preview switcher: **Desktop / Tablet / Mobile** (via CSS `@container` + `@media` queries)
+**Filament Page Builder** is a Composer package that adds a complete **visual page-building system** to any Laravel application that uses [Filament v5](https://filamentphp.com) as its admin panel.
 
-### Draft → Preview → Publish Workflow
-- `draft_content` vs `content` — the live page is never touched while editing
-- Signed **Preview URL** showing the draft in the real frontend layout
-- **Publish** copies draft to live content, records a `PageRevision` snapshot and clears the render cache
-- **Discard Draft**, **Unpublish**, **Restore Revision** at any time
+Think of it as **Elementor Pro for Laravel**, but:
 
-### 17 Built-in Widgets
-`Container`, `Heading`, `Rich Text`, `Button`, `Image`, `Spacer / Divider`, `Icon`, `Video`, `HTML Embed`, `Image Gallery`, `Alert`, `Accordion`, `Tabs`, `Testimonial`, `Loop Builder`, `Form Builder`
+- **100% open-source (MIT)** — no license fees, no activation keys, no SaaS dependency.
+- **Laravel-native** — pages are Eloquent models, layouts are JSON schemas rendered with Blade, forms submit to Laravel controllers, dynamic content reads your Eloquent models directly.
+- **Extensible by design** — every widget, dynamic tag, template and form action is a small PHP class you (or a paid add-on) can register.
 
-### Theme Builder (Pro)
-- **Header / Footer / Single / Archive** templates with `draft_content` / `content` and publish workflow
-- **Display conditions**: `include` / `exclude` rules on `entire_site`, `path` (wildcards), `route`, `page_slug`, `model`
-- Blade directive: `@filamentThemeRegion('header')`
+You get a **Livewire v4 visual editor** inside Filament where users drag widgets onto a canvas, edit them in a Content / Style / Advanced inspector, preview on Desktop / Tablet / Mobile, and **Save Draft → Preview → Publish** when ready.
 
-### Dynamic Content (JetEngine-style)
-- **Dynamic Tags**: bind any widget setting to `page.title`, `model.attribute:title`, `site.current_date`, or your own providers
-- **Loop Builder**: render any allowlisted Eloquent model as a grid/list with filters, ordering, limits and per-record sub-templates (with unique element IDs and cycle protection)
+## Who is it for?
 
-### Form Builder (Pro)
-- Drag & drop fields (text, email, number, textarea, select, checkbox)
-- **Pluggable actions**: Save to Database, Email, Redirect, Webhook (SSRF-safe, HTTPS + public hosts only)
-- **Conditional logic** (`visible_if`), **multi-step forms**, **Honeypot**, **Cloudflare Turnstile**, **rate limiting**
+| You are... | Why you'll like it |
+| --- | --- |
+| **Laravel agency / freelancer** | Deliver client-editable marketing sites in Filament without building a custom CMS from scratch. |
+| **SaaS developer** | Let tenants build their own landing pages, popups and forms inside your existing Filament panel. |
+| **Product owner** | Marketers edit pages, headers, footers and forms visually — developers keep Eloquent models and code review. |
+| **Add-on author** | Sell your own widgets/integrations on top of a free core (Crocoblock-style add-on API). |
 
-### Popup Builder (Pro)
-- Same JSON schema + renderer as pages
-- Triggers: **on load**, **on scroll %**, **exit intent**, **on click**
-- URL / slug conditions, show-once-per-visitor, accessible dialogs (`role="dialog"`, focus handling, `localStorage` safe-guards)
+## How does it work?
 
-### Add-on API (Crocoblock strategy)
-- `WidgetRegistry`, `DynamicTagRegistry`, `TemplateRegistry`, `FormActionRegistry`
-- Events: `PageSavingDraft`, `PageDraftSaved`, `PagePublishing`, `PagePublished`, `BeforeElementRender`, `AfterElementRender`
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                         Filament v5 Admin Panel                        │
+│                                                                        │
+│  Pages Resource  →  "Visual Builder"  →  Livewire v4 Editor            │
+│                                              │                         │
+│                    Widgets ── Inspector ── Canvas (drag & drop)        │
+│                                              │                         │
+│                         Save Draft ── Preview ── Publish               │
+└──────────────────────────────┬─────────────────────────────────────────┘
+                               │
+                    JSON Schema (version 1, containers → widgets)
+                               │
+              ┌────────────────┴─────────────────┐
+              │                                  │
+     draft_content (working)            content (live, cached)
+              │                                  │
+     Signed Preview URL                 Blade + CSS renderer
+     (/_builder/preview/{page})         (public /pages/{slug})
+```
 
----
+- Every page is stored as a **JSON schema tree** (`containers → widgets → settings + dynamic`).
+- **Two columns** keep editing safe: `draft_content` (what you edit/preview) and `content` (what visitors see).
+- On **Publish**, the draft is copied to live content, a **revision snapshot** is created and the render cache is invalidated.
+- Rendering is pure **Blade + generated CSS** (CSS variables with `@container` and `@media` queries), so no iframe or JS build step is required.
+
+## Feature overview
+
+| Area | What you get |
+| --- | --- |
+| **Visual Editor** | Drag & drop canvas, nested Flexbox containers, Content/Style/Advanced inspector, Navigator element tree, Undo/Redo, Copy/Paste, Duplicate, Hide/Show, responsive viewport switcher |
+| **Workflow** | Draft vs Published, signed Preview URLs, Publish with revisions, Discard Draft, Unpublish, Restore Revision |
+| **17 Widgets** | Container, Heading, Rich Text, Button, Image, Spacer/Divider, Icon, Video, HTML Embed, Image Gallery, Alert, Accordion, Tabs, Testimonial, Loop Builder, Form Builder |
+| **Theme Builder** | Header/Footer/Single/Archive templates with include/exclude display conditions (path, route, page slug, model) |
+| **Dynamic Content** | Dynamic Tags (`page.title`, `model.attribute:*`, `site.current_date`) + Loop Builder for Eloquent collections with filters/ordering/sub-templates |
+| **Forms** | Drag & drop fields, pluggable actions (Email, Redirect, Webhook, Save to Database), conditional logic, multi-step, honeypot, Cloudflare Turnstile, rate limiting |
+| **Popups** | Same schema/renderer as pages, on-load/scroll/exit-intent/click triggers, URL conditions, show-once-per-visitor, accessible dialogs |
+| **Add-on API** | WidgetRegistry, DynamicTagRegistry, TemplateRegistry, FormActionRegistry + lifecycle events |
 
 ## Requirements
 
@@ -58,94 +111,258 @@ Built and maintained by [KalimeroMK](https://github.com/KalimeroMK).
 | Livewire | `^4.0` |
 | Tailwind CSS | `^4.0` |
 
-## Installation
+## Installation (Quick Start)
+
+### 1. Require the package
 
 ```bash
 composer require kalimeromk/filament-page-builder
 ```
 
-Publish and run migrations:
+### 2. Publish and run migrations
 
 ```bash
 php artisan vendor:publish --tag="filament-page-builder-migrations"
 php artisan migrate
 ```
 
-Register the plugin in your panel provider:
+This creates the tables: `fpb_pages`, `fpb_page_revisions`, `fpb_templates`, `fpb_theme_templates`, `fpb_form_submissions`, `fpb_popups`.
+
+### 3. Register the plugin in your panel
+
+In `app/Providers/Filament/AdminPanelProvider.php`:
 
 ```php
+use Filament\Panel;
 use KalimeroMK\FilamentPageBuilder\FilamentPageBuilderPlugin;
 
 public function panel(Panel $panel): Panel
 {
     return $panel
-        // ...
+        ->default()
+        ->id('admin')
+        ->path('admin')
+        // ... your existing configuration
         ->plugin(FilamentPageBuilderPlugin::make());
 }
 ```
 
-Optionally publish the config:
+Optional configuration:
+
+```php
+->plugin(
+    FilamentPageBuilderPlugin::make()
+        ->navigationGroup('Content')
+        ->navigationSort(10)
+        ->pageResource(true)
+        ->themeTemplateResource(true)
+)
+```
+
+### 4. (Optional) Publish the config
 
 ```bash
 php artisan vendor:publish --tag="filament-page-builder-config"
 ```
 
-## Usage
+## Your first page in 2 minutes
 
-### Building a page
+1. In the Filament sidebar, open **Pages → Create**.
+2. Give it a **Title** (e.g. `Home`) and **Slug** (e.g. `home`), then **Create**.
+3. In the table, click **Visual Builder** (or open `Pages → Edit → Open Visual Builder`).
+4. From the **+ Blocks** panel, click **Flex Container**, then **Heading** inside it.
+5. Click the heading on the canvas — the **Inspector** opens with Content / Style / Advanced tabs. Change the text to `Hello Laravel!`.
+6. Click **Save Draft**, then **Preview** to see the draft in the real frontend layout (Desktop / Tablet / Mobile).
+7. Click **Publish** — your page is now live at **`/pages/home`** 🎉
 
-1. Open **Pages** in your Filament panel and create a page.
-2. Click **Visual Builder** (`/{record}/builder`).
-3. Drag widgets onto the canvas, edit them in the **Inspector**, then click **Save Draft**, **Preview** or **Publish**.
-4. The public URL is `/pages/{slug}` (configurable prefix).
+## Usage guides
 
-### Rendering a page in your own Blade view
+### Pages & Visual Editor
+
+**Editor tabs (left panel):**
+
+- **+ Blocks** — widget palette (click or drag onto the canvas / into a container).
+- **Edit (Inspector)** — Filament v5 `Schema` form with **Content / Style / Advanced** tabs for the selected element + **Dynamic Tags** bindings.
+- **Tree (Navigator)** — hierarchical element tree with select, move up/down, hide/show and delete.
+- **Library** — Save the full page or a selected block as a reusable template; insert/replace from database or registered templates; **Import / Export JSON**.
+- **History** — published revisions with **Restore**.
+- **SEO** — title, slug, layout (`default`, `canvas`, `full_width`), meta title/description, OG image, `noindex`.
+
+**Top toolbar:** Undo / Redo, Paste Block, viewport switcher, **Discard Draft**, **Save Draft**, **Preview**, **Publish**.
+
+**Render a page in your own Blade view:**
 
 ```blade
 @renderPageBuilder($page)
 ```
 
-### Rendering a theme region
-
-```blade
-@filamentThemeRegion('header', ['page' => $page])
-@filamentThemeRegion('footer', ['page' => $page])
-```
-
-### Programmatic rendering
+**Programmatic rendering:**
 
 ```php
 use KalimeroMK\FilamentPageBuilder\Facades\PageBuilder;
 
-$rendered = PageBuilder::renderPage($page);            // published, cached
-$rendered = PageBuilder::renderPage($page, useDraft: true); // draft preview
+$published = PageBuilder::renderPage($page);                 // cached live content
+$draft     = PageBuilder::renderPage($page, useDraft: true); // draft preview
 
-echo $rendered->toHtml();
+echo $published->toHtml(); // includes <style> + canvas markup
 ```
 
-### Loop Builder & Dynamic Tags
+**Page model workflow:**
 
-Add a **Loop Builder** widget, set your Eloquent model class and query options, then bind any widget setting with a dynamic tag:
+```php
+$page->saveDraft($schema);       // writes draft_content only
+$page->getPreviewUrl();          // signed preview link (60 min TTL)
+$page->publish();                // copies draft to live + creates revision
+$page->discardDraft();           // reset draft to published content
+$page->unpublish();              // back to draft, hides from public route
+$page->restoreRevision($rev);    // restore a previous snapshot
+$page->hasUnpublishedChanges();  // true when draft differs from live
+```
+
+### Theme Builder
+
+Create **Theme Builder → New Template** with a region:
+
+- **Header** / **Footer** — rendered by the layout via `@filamentThemeRegion('header')` / `@filamentThemeRegion('footer')`.
+- **Single** — per-model detail templates.
+- **Archive** — listing templates.
+
+**Display conditions** (include/exclude rules):
+
+| Target | Example | Meaning |
+| --- | --- | --- |
+| `entire_site` | `*` | Everywhere |
+| `path` | `blog/*` | Any URL starting with `/blog/` |
+| `route` | `blog.*` | Named routes matching the pattern |
+| `page_slug` | `checkout` | Only the page with that slug |
+| `model` | `App\Models\Post` | When the current record is that model |
+
+Example: **"Whole site except checkout"** = `include entire_site *` + `exclude page_slug checkout`.
+
+**Priority** decides which template wins when several match (higher number wins).
+
+### Dynamic Tags
+
+Bind **any widget setting** to a dynamic source in the Inspector → **Dynamic Tags** section:
 
 ```
-model.attribute:title
-page.title
-site.current_date
+model.attribute:title          → current record's `title` attribute
+model.attribute:author.name    → nested attribute / relation
+page.title                     → current page title
+site.current_date              → today's date
 ```
 
-Allow models explicitly in `config/filament-page-builder.php`:
+Add your own provider:
+
+```php
+use KalimeroMK\FilamentPageBuilder\Contracts\DynamicTagContract;
+
+class UserNameTag implements DynamicTagContract
+{
+    public static function getName(): string { return 'user.name'; }
+    public static function getLabel(): string { return 'Current User Name'; }
+    public static function getGroup(): string { return 'User'; }
+
+    public function resolve(array $parameters = [], array $context = []): mixed
+    {
+        return auth()->user()?->name;
+    }
+}
+
+// boot()
+app(\KalimeroMK\FilamentPageBuilder\Registries\DynamicTagRegistry::class)
+    ->register(UserNameTag::class);
+```
+
+### Loop Builder
+
+Render **any Eloquent collection** as a grid or list:
+
+1. Add the **Loop Builder** widget.
+2. Set **Model Class** (e.g. `App\Models\Post`), **Limit**, **Order By**, optional scope and filters.
+3. Choose a **Sub-template** from the Template Library or paste an **Inline Item JSON Schema**.
+4. Inside the item schema, use `model.attribute:*` — it resolves against the **current record** of each iteration.
+
+**Security:** only models listed in `loop.allowed_models` can be queried (fail-closed by default).
 
 ```php
 'loop' => [
     'allowed_models' => [\App\Models\Post::class],
-    'allowed_fields' => [],
+    'allowed_fields' => [
+        \App\Models\Post::class => ['id', 'title', 'status', 'created_at'],
+    ],
 ],
 ```
 
-### Registering your own widget (Add-on API)
+### Form Builder
+
+1. Add the **Form Builder** widget to a page (or popup).
+2. Define fields (`text`, `email`, `number`, `textarea`, `select`, `checkbox`) with labels, required flags, options, **step numbers** (multi-step) and **`visible_if` rules** (conditional display).
+3. Add **actions after submit** (any order, any combination):
+   - **Save to Database** — stores the submission in `fpb_form_submissions`.
+   - **Email** — sends a plain-text notification to the configured recipient.
+   - **Redirect** — relative URL by default (external URLs require `allow_external_redirects`).
+   - **Webhook** — HTTPS POST to a public host (SSRF-safe).
+4. Enable **Honeypot** (default on) and/or **Cloudflare Turnstile** (set both keys in config).
+
+Submissions are **rate-limited**, validated server-side (including conditional visibility), and each action's result is logged. Errors use a per-form error bag, so multiple forms on one page don't clash.
+
+### Popup Builder
+
+1. Create a popup in the database (or via code) with a JSON schema — the **same renderer** as pages.
+2. Configure **trigger**: `on_load` (delay seconds), `on_scroll` (percent), `exit_intent`, or `on_click`.
+3. Add **conditions** (same rule engine as Theme Builder) and **show once per visitor**.
+
+Popups render on all layouts (`default`, `canvas`, `full_width`) with accessible dialogs (`role="dialog"`, Escape to close, focus handling) and storage-safe "show once" logic.
+
+## Configuration reference
+
+`config/filament-page-builder.php`:
 
 ```php
-use KalimeroMK\FilamentPageBuilder\Facades\PageBuilder;
+return [
+    'allow_raw_html' => false, // force sanitization of HTML embeds
+
+    'routing' => [
+        'enabled' => true,
+        'prefix' => 'pages',               // public pages: /pages/{slug}
+        'preview_prefix' => '_builder/preview',
+        'middleware' => ['web'],
+        'preview_middleware' => ['web'],
+    ],
+
+    'layouts' => [
+        'default' => 'filament-page-builder::layouts.default',
+        'canvas' => 'filament-page-builder::layouts.canvas',
+        'full_width' => 'filament-page-builder::layouts.full-width',
+    ],
+
+    'breakpoints' => ['tablet' => 1024, 'mobile' => 767],
+
+    'cache' => ['enabled' => true, 'ttl' => 86400, 'prefix' => 'fpb_page_render_'],
+
+    'loop' => [
+        'allowed_models' => [],
+        'allowed_fields' => [],
+    ],
+
+    'forms' => [
+        'rate_limit' => '10,1',
+        'webhook_allowed_hosts' => [],
+        'allow_external_redirects' => false,
+        'turnstile' => [
+            'site_key' => env('FPB_TURNSTILE_SITE_KEY', ''),
+            'secret_key' => env('FPB_TURNSTILE_SECRET_KEY', ''),
+        ],
+    ],
+];
+```
+
+## Add-on API (for developers)
+
+### Register a widget
+
+```php
 use KalimeroMK\FilamentPageBuilder\Widgets\AbstractWidget;
 
 class PricingTableWidget extends AbstractWidget
@@ -154,9 +371,28 @@ class PricingTableWidget extends AbstractWidget
     public static function getLabel(): string { return 'Pricing Table'; }
     public static function getIcon(): string { return 'heroicon-o-currency-dollar'; }
 
-    public function getContentSchema(): array { return []; }
+    public static function getDefaultSettings(): array
+    {
+        return array_merge(static::baseDefaultSettings(), [
+            'plan_name' => 'Pro',
+            'price' => '€19',
+        ]);
+    }
+
+    public function getContentSchema(): array
+    {
+        return [
+            \Filament\Forms\Components\TextInput::make('plan_name')->required(),
+            \Filament\Forms\Components\TextInput::make('price')->required(),
+        ];
+    }
+
     public function getStyleSchema(): array { return []; }
-    public function getCssMap(): array { return $this->baseCssMap(); }
+
+    public function getCssMap(): array
+    {
+        return $this->baseCssMap();
+    }
 
     protected function getViewName(): string
     {
@@ -164,64 +400,55 @@ class PricingTableWidget extends AbstractWidget
     }
 }
 
-// In your add-on's service provider boot():
-PageBuilder::widgets()->register(PricingTableWidget::class);
+// boot() in your add-on's service provider
+\KalimeroMK\FilamentPageBuilder\Facades\PageBuilder::widgets()
+    ->register(PricingTableWidget::class);
 ```
 
-### Registering a form action
+### Register a form action
 
 ```php
 use KalimeroMK\FilamentPageBuilder\Contracts\FormActionContract;
 
-class CrmAction implements FormActionContract
+class MailchimpAction implements FormActionContract
 {
-    public static function getName(): string { return 'crm'; }
-    public static function getLabel(): string { return 'Send to CRM'; }
+    public static function getName(): string { return 'mailchimp'; }
+    public static function getLabel(): string { return 'Subscribe to Mailchimp'; }
 
     public function handle(array $actionSettings, array $formData, $submission, $page, array $context = []): array
     {
-        // ...
+        // ... call your integration
         return ['success' => true];
     }
 }
 
-app(\KalimeroMK\FilamentPageBuilder\Registries\FormActionRegistry::class)->register(CrmAction::class);
+app(\KalimeroMK\FilamentPageBuilder\Registries\FormActionRegistry::class)
+    ->register(MailchimpAction::class);
 ```
 
-## Configuration highlights
+### Register a template
 
 ```php
-'routing' => [
-    'prefix' => 'pages',
-    'preview_prefix' => '_builder/preview',
-],
-
-'loop' => [
-    'allowed_models' => [],
-    'allowed_fields' => [],
-],
-
-'forms' => [
-    'rate_limit' => '10,1',
-    'webhook_allowed_hosts' => [],
-    'allow_external_redirects' => false,
-    'turnstile' => [
-        'site_key' => env('FPB_TURNSTILE_SITE_KEY', ''),
-        'secret_key' => env('FPB_TURNSTILE_SECRET_KEY', ''),
-    ],
-],
+\KalimeroMK\FilamentPageBuilder\Facades\PageBuilder::templates()->register(
+    'hero-gradient',
+    'Hero Gradient',
+    ['version' => 1, 'elements' => [/* ... */]],
+    category: 'heroes',
+);
 ```
 
-## Security
+### Lifecycle events
 
-- DOM-based HTML sanitization (Symfony HTML Sanitizer) for rich text & HTML embeds
-- URL scheme + control-character sanitization for links and images
-- `#[Locked]` Livewire properties (IDOR-safe editor)
-- `RestrictsFileUploadsToSchemaComponents`
-- Signed preview URLs + panel/policy authorization
-- SSRF-safe webhooks (HTTPS, public IPs only, no redirects)
-- Form rate limiting, honeypot, optional Cloudflare Turnstile
-- Eloquent `$hidden` attributes are never exposed via dynamic tags
+`PageSavingDraft`, `PageDraftSaved`, `PagePublishing`, `PagePublished`, `BeforeElementRender`, `AfterElementRender` — listen to them to alter schemas, settings or rendered HTML.
+
+## Security notes
+
+- **XSS**: DOM-based HTML sanitization (Symfony HTML Sanitizer) + URL scheme/control-character filtering on links and images.
+- **Editor**: `#[Locked]` Livewire properties (IDOR-safe), `RestrictsFileUploadsToSchemaComponents`, panel/policy authorization.
+- **Preview**: signed URLs or Filament panel/policy check — never "any logged-in user".
+- **Dynamic content**: Eloquent `$hidden` attributes are never exposed; loop models/fields are allowlisted.
+- **Forms**: CSRF, server-side validation, rate limiting, honeypot, optional Turnstile, per-form error bags, sanitized action logs.
+- **Webhooks**: HTTPS only, public IPs only, no redirects, optional host allowlist.
 
 ## Testing
 
@@ -231,9 +458,23 @@ composer test
 ./vendor/bin/pest
 ```
 
-31 feature tests (262+ assertions) cover the full Draft/Preview/Publish lifecycle, renderer, widgets, theme conditions, loop builder, forms and popups.
+**31 feature tests (262+ assertions)** covering: widget registry & schemas, rendering & responsive CSS, Draft/Preview/Publish lifecycle, revisions, Add-on API, Theme Builder conditions, Navigator, Loop Builder & Dynamic Tags, Form Builder (validation, actions, SSRF, honeypot), Popups & Turnstile.
 
-## Roadmap
+## FAQ
+
+**Does it require an iframe?**
+No. Responsive preview works with CSS `@container` queries + `@media` fallbacks, so the canvas runs directly in the Filament page.
+
+**Does it replace Filament Resources?**
+No — it complements them. Your Eloquent models and Resources remain the source of truth for data; the builder handles presentation, dynamic content and forms.
+
+**Can I use my own Blade layout?**
+Yes. Configure `layouts` in the config or override the published views. The `canvas` layout renders without header/footer (Elementor Canvas-style).
+
+**Will the core become paid?**
+No. The core stays MIT forever. Future revenue comes from optional add-ons (e-commerce widgets, integrations, template cloud), exactly like Crocoblock's model.
+
+## Roadmap & monetization
 
 - [x] v0.1 — JSON schema, renderer, Draft/Preview/Publish, 4 widgets
 - [x] v0.2 — Livewire v4 visual editor, drag & drop, 4 more widgets
@@ -242,10 +483,12 @@ composer test
 - [x] v0.5 — Dynamic Tags + Loop Builder
 - [x] v0.6 — Form Builder with pluggable actions
 - [x] v0.7 — Popup Builder + conditional/multi-step forms + Turnstile
-- [x] v1.0 — Documentation, test suite, Packagist release
+- [x] v1.0 — Documentation, test suite, stable release
 
-Planned paid add-ons (core stays MIT forever): e-commerce widgets, advanced motion effects, CRM/newsletter integrations, template cloud library.
+**Planned paid add-ons (core stays free):** e-commerce widgets (Lunar/Bagisto/Cashier), CRM & newsletter integrations (Mailchimp, HubSpot), advanced motion effects, template cloud library, A/B testing.
 
-## License
+## Contributing & License
 
-MIT — see [LICENSE.md](LICENSE.md). © KalimeroMK <zbogoevski@gmail.com>
+Issues and pull requests are welcome at [github.com/KalimeroMK/filament-page-builder](https://github.com/KalimeroMK/filament-page-builder).
+
+**License:** MIT — see [LICENSE.md](LICENSE.md). © KalimeroMK <zbogoevski@gmail.com>

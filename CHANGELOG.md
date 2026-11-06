@@ -2,6 +2,32 @@
 
 All notable changes to `kalimeromk/filament-page-builder` are documented here.
 
+## v1.3.0 — 2026-11-06
+
+- **Full Site Kit import/export** (`SiteKitService` + `SiteKitPage`): pages, theme templates, templates, popups, menus, and settings in one JSON payload, imported atomically as drafts with fresh element IDs, unique slugs, and source→new `template_id` / `global_id` remapping.
+- **Loop Carousel** layout with scroll-snap and **AJAX Load More pagination** (`LoopController`, offset-based `hasMore` probing, response validation, and error states).
+- **Maintenance mode** middleware with 503 page (optional `PageTemplate` render) and admin/preview/Livewire bypass.
+- **Finder (Ctrl+K)** in the visual editor: search elements by ID, widget type, or text with breadcrumbs and quick selection.
+
+## v1.2.0 — 2026-11-06
+
+- **Nav Menu + Off-canvas** (`Menu`, `MenuResource`, `NavMenuWidget` with dropdowns, breakpoint off-canvas, ARIA, focus management).
+- **Motion Effects & Sticky** (`animation`, `sticky` + offset) and **Device visibility** (`hide_on_desktop/tablet/mobile`).
+- **Custom Fonts & Icons** (`CustomAssetsService` with HTTPS font imports, custom families, and a DOM-based SVG sanitizer).
+- **Role Manager** (`fpb.access_builder` Gate + `PageBuilderAuthorizer`, `default_allow` config) on all resources.
+- **Revision diff/compare** (`SchemaDiffService` with reorder detection) + Compare UI in the editor.
+- All features remain free & open-source (MIT), no paid version.
+
+## v1.1.0 — 2026-11-06
+
+- **Global Site Settings** (colors & typography via CSS variables + Filament settings page).
+- **Global Widget** with synced instances and nested CSS propagation.
+- **Custom CSS + Custom HTML Attributes** per element (strict allowlists).
+- **Custom 404** theme region + fallback controller.
+- **Form Submissions admin** with details + CSV export (formula escaping).
+- **Autoresponder** email action.
+- 9 new widgets (global_widget, slider, pricing_table, countdown, progress_bar, social_icons, star_rating, google_maps, flip_box, cta).
+
 ## v1.0.0 — 2026-11-06
 
 Official stable release.

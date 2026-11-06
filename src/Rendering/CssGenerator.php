@@ -15,13 +15,21 @@ class CssGenerator
      */
     public function baseStyles(): string
     {
-        return <<<'CSS'
+        $globalCss = app(\KalimeroMK\FilamentPageBuilder\Services\SiteStyleService::class)->toCss();
+
+        return $globalCss . "\n" . <<<'CSS'
 .fpb-canvas-root {
     container-type: inline-size;
     container-name: fpb-canvas;
     width: 100%;
     box-sizing: border-box;
+    font-family: var(--fpb-global-font-family, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif);
+    color: var(--fpb-global-text, #111827);
+    font-size: var(--fpb-global-body-size, 16px);
 }
+.fpb-canvas-root h1 { font-size: var(--fpb-global-h1-size, 48px); }
+.fpb-canvas-root h2 { font-size: var(--fpb-global-h2-size, 36px); }
+.fpb-canvas-root h3 { font-size: var(--fpb-global-h3-size, 28px); }
 .fpb-canvas-root *, .fpb-canvas-root *::before, .fpb-canvas-root *::after {
     box-sizing: border-box;
 }
@@ -45,7 +53,7 @@ class CssGenerator
     margin-right: auto;
 }
 .fpb-heading {
-    color: var(--fpb-color, #111827);
+    color: var(--fpb-color, var(--fpb-global-text, #111827));
     font-size: var(--fpb-font-size, 32px);
     font-weight: var(--fpb-font-weight, 700);
     text-align: var(--fpb-text-align, left);
@@ -66,7 +74,7 @@ class CssGenerator
     justify-content: center;
     gap: 8px;
     padding: 12px 24px;
-    background-color: var(--fpb-btn-bg, #2563eb);
+    background-color: var(--fpb-btn-bg, var(--fpb-global-primary, #2563eb));
     color: var(--fpb-btn-color, #ffffff);
     border: 1px solid transparent;
     border-radius: var(--fpb-radius, 8px);
@@ -220,6 +228,9 @@ class CssGenerator
     color: var(--fpb-active-color, #2563eb);
     border-bottom-color: var(--fpb-active-color, #2563eb);
 }
+.fpb-flipbox:hover .fpb-flipbox-inner {
+    transform: rotateY(180deg);
+}
 .fpb-loop--grid .fpb-loop-items {
     display: grid;
     grid-template-columns: repeat(var(--fpb-loop-cols, 3), minmax(0, 1fr));
@@ -288,6 +299,11 @@ CSS;
             $rules[] = "{$selector} { " . implode(' ', $desktopDecls) . ' }';
         }
 
+        $customCss = $this->sanitizeCustomCss((string) ($settings['custom_css'] ?? ''));
+        if ($customCss !== '') {
+            $rules[] = "{$selector} { {$customCss} }";
+        }
+
         $tabletBreakpoint = (int) config('filament-page-builder.breakpoints.tablet', 1024);
         $mobileBreakpoint = (int) config('filament-page-builder.breakpoints.mobile', 767);
 
@@ -335,6 +351,22 @@ CSS;
         }
 
         return null;
+    }
+
+    protected function sanitizeCustomCss(string $css): string
+    {
+        $css = trim($css);
+
+        if ($css === '') {
+            return '';
+        }
+
+        // Reject the whole declaration if it contains dangerous constructs (no reconstruction by deletion)
+        if (preg_match('/[{}<>\\\\]|\/\*|\*\/|@import|url\s*\(|expression\s*\(|javascript\s*:/i', $css)) {
+            return '';
+        }
+
+        return $css;
     }
 
     protected function formatCssValue(mixed $value, string $unit): string

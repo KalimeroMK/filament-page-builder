@@ -39,4 +39,7 @@ if (config('filament-page-builder.routing.enabled', true)) {
             ->middleware('throttle:' . $throttle)
             ->name('filament-page-builder.popup-form.submit');
     });
+
+    Route::fallback([\KalimeroMK\FilamentPageBuilder\Http\Controllers\NotFoundController::class, 'show'])
+        ->middleware($publicMiddleware);
 }

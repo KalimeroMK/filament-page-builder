@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace KalimeroMK\FilamentPageBuilder\Widgets;
 
+use Filament\Forms\Components\CodeEditor;
+use Filament\Forms\Components\CodeEditor\Enums\Language;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Grid;
@@ -94,6 +96,13 @@ abstract class AbstractWidget implements WidgetContract
             Toggle::make('hide_element')
                 ->label('Hide Element')
                 ->default(false),
+            CodeEditor::make('custom_css')
+                ->label('Custom CSS (scoped to this element)')
+                ->language(Language::Css)
+                ->helperText('Declarations only, e.g. box-shadow: 0 4px 12px rgba(0,0,0,.15);'),
+            TextInput::make('custom_attributes')
+                ->label('Custom HTML Attributes')
+                ->placeholder('data-track="hero" aria-label="Banner"'),
         ];
     }
 
@@ -143,7 +152,7 @@ abstract class AbstractWidget implements WidgetContract
      */
     public function render(array $element, array $settings, string $childrenHtml = '', array $context = []): string
     {
-        return View::make($this->getViewName(), [
+        $html = View::make($this->getViewName(), [
             'element' => $element,
             'id' => (string) ($element['id'] ?? ''),
             'htmlId' => preg_replace('/[^a-zA-Z0-9_-]/', '', (string) ($settings['element_id'] ?? '')),
@@ -152,5 +161,74 @@ abstract class AbstractWidget implements WidgetContract
             'childrenHtml' => $childrenHtml,
             'context' => $context,
         ])->render();
+
+        return $this->appendElementAttributes($html, $settings);
+    }
+
+    /**
+     * Inject sanitized custom HTML attributes into the first opening tag of the widget wrapper.
+     *
+     * @param  array<string, mixed>  $settings
+     */
+    protected function appendElementAttributes(string $html, array $settings): string
+    {
+        $rawAttributes = trim((string) ($settings['custom_attributes'] ?? ''));
+
+        if ($rawAttributes === '' || trim($html) === '') {
+            return $html;
+        }
+
+        $safeAttributes = $this->sanitizeAttributes($rawAttributes);
+
+        if ($safeAttributes === '') {
+            return $html;
+        }
+
+        return (string) preg_replace_callback(
+            '/<([a-zA-Z][a-zA-Z0-9]*)(\s|>)/',
+            fn (array $m): string => '<' . $m[1] . ' ' . $safeAttributes . $m[2],
+            $html,
+            1,
+        );
+    }
+
+    protected function sanitizeAttributes(string $raw): string
+    {
+        // Tokenize attributes, tolerating quoted values
+        if (! preg_match_all(
+            '/([a-zA-Z_:][a-zA-Z0-9_:.\-]*)(?:\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s"\'=<>`]+)))?/',
+            $raw,
+            $matches,
+            PREG_SET_ORDER,
+        )) {
+            return '';
+        }
+
+        $safe = [];
+
+        foreach ($matches as $match) {
+            $name = strtolower($match[1]);
+            $value = $match[2] !== '' ? $match[2] : ($match[3] !== '' ? $match[3] : ($match[4] ?? ''));
+
+            // Reject event handlers and structural/dangerous attributes
+            if (str_starts_with($name, 'on') || in_array($name, ['class', 'id', 'style', 'src', 'href', 'srcdoc', 'formaction', 'xlink:href'], true)) {
+                continue;
+            }
+
+            // Allow only data-*, aria-*, role and title
+            if (! str_starts_with($name, 'data-') && ! str_starts_with($name, 'aria-') && ! in_array($name, ['role', 'title'], true)) {
+                continue;
+            }
+
+            if (preg_match('/[<>]|javascript\s*:|vbscript\s*:/i', (string) $value)) {
+                continue;
+            }
+
+            $safe[] = $value === '' || $value === null
+                ? $name
+                : $name . '="' . htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8') . '"';
+        }
+
+        return implode(' ', $safe);
     }
 }

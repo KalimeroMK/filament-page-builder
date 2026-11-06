@@ -6,6 +6,7 @@ namespace KalimeroMK\FilamentPageBuilder;
 
 use Filament\Contracts\Plugin;
 use Filament\Panel;
+use KalimeroMK\FilamentPageBuilder\Filament\Pages\SiteSettingsPage;
 use KalimeroMK\FilamentPageBuilder\Filament\Resources\PageResource;
 use KalimeroMK\FilamentPageBuilder\Filament\Resources\ThemeTemplateResource;
 use UnitEnum;
@@ -101,6 +102,14 @@ class FilamentPageBuilderPlugin implements Plugin
         if ($resources !== []) {
             $panel->resources($resources);
         }
+
+        $panel->pages([
+            SiteSettingsPage::class,
+        ]);
+
+        $panel->resources([
+            \KalimeroMK\FilamentPageBuilder\Filament\Resources\FormSubmissionResource::class,
+        ]);
     }
 
     public function boot(Panel $panel): void

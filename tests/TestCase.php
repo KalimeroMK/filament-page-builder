@@ -61,5 +61,8 @@ class TestCase extends Orchestra
 
         $createPopups = include __DIR__ . '/../database/migrations/create_fpb_popups_table.php.stub';
         $createPopups->up();
+
+        $createSettings = include __DIR__ . '/../database/migrations/create_fpb_settings_table.php.stub';
+        $createSettings->up();
     }
 }

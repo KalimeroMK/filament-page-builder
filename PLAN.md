@@ -230,6 +230,11 @@
 | **v0.6** ✅ | Form Builder со pluggable акции |  |
 | **v0.7** ✅ | Popup Builder + conditional forms |  |
 | **v1.0** ✅ | Полирање, тестови (Pest), документација, демо сајт, Packagist | **Официјален v1.0 Launch** |
+| **v1.1** 🔨 | **Global Site Settings** (глобални бои/типографија со CSS варијабли + Filament settings страница), **Global Widget** (synced instances од Template Library), **Custom CSS + Custom Attributes** по елемент, **Custom 404** (`not_found` theme region + fallback), **Form Submissions admin** (табела + CSV export), **Autoresponder** email акција, **9 нови widgets** (`slider`, `pricing_table`, `countdown`, `progress_bar`, `social_icons`, `star_rating`, `google_maps`, `flip_box`, `cta`) | Elementor Pro Site Settings / Global Widget / Custom CSS / 404 |
+| **v1.2** 📋 | **Nav Menu widget + Off-canvas mobile menu**, **Motion Effects & Sticky** (fade/slide/parallax), **Device visibility** (`hide_on_desktop/tablet/mobile`), **Custom Fonts & Icons**, **Role Manager** (Gate policies), **Revision diff/compare** |  |
+| **v1.3+** 📋 | **Full Site Kit import/export** (ZIP/JSON), **Loop Carousel**, **AJAX pagination/филтри за Loop**, **Maintenance / Coming Soon mode**, **Finder (Ctrl+K)** во едиторот |  |
+
+**Платени add-ons (core останува MIT):** e-commerce widgets (Lunar/Bagisto/Cashier), CRM & newsletter integrations (Mailchimp, HubSpot), advanced motion effects, template cloud library, A/B testing.
 
 ---
 

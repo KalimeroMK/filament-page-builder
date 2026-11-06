@@ -21,6 +21,16 @@ use KalimeroMK\FilamentPageBuilder\Widgets\TextWidget;
 use KalimeroMK\FilamentPageBuilder\Widgets\VideoWidget;
 use KalimeroMK\FilamentPageBuilder\Widgets\LoopWidget;
 use KalimeroMK\FilamentPageBuilder\Widgets\FormWidget;
+use KalimeroMK\FilamentPageBuilder\Widgets\GlobalWidget;
+use KalimeroMK\FilamentPageBuilder\Widgets\SliderWidget;
+use KalimeroMK\FilamentPageBuilder\Widgets\PricingTableWidget;
+use KalimeroMK\FilamentPageBuilder\Widgets\CountdownWidget;
+use KalimeroMK\FilamentPageBuilder\Widgets\ProgressBarWidget;
+use KalimeroMK\FilamentPageBuilder\Widgets\SocialIconsWidget;
+use KalimeroMK\FilamentPageBuilder\Widgets\StarRatingWidget;
+use KalimeroMK\FilamentPageBuilder\Widgets\GoogleMapsWidget;
+use KalimeroMK\FilamentPageBuilder\Widgets\FlipBoxWidget;
+use KalimeroMK\FilamentPageBuilder\Widgets\CtaWidget;
 
 return [
     /*
@@ -49,6 +59,7 @@ return [
         'theme_templates' => 'fpb_theme_templates',
         'form_submissions' => 'fpb_form_submissions',
         'popups' => 'fpb_popups',
+        'settings' => 'fpb_settings',
     ],
 
     /*
@@ -155,5 +166,15 @@ return [
         TestimonialWidget::class,
         LoopWidget::class,
         FormWidget::class,
+        GlobalWidget::class,
+        SliderWidget::class,
+        PricingTableWidget::class,
+        CountdownWidget::class,
+        ProgressBarWidget::class,
+        SocialIconsWidget::class,
+        StarRatingWidget::class,
+        GoogleMapsWidget::class,
+        FlipBoxWidget::class,
+        CtaWidget::class,
     ],
 ];

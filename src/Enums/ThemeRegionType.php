@@ -14,6 +14,7 @@ enum ThemeRegionType: string implements HasColor, HasIcon, HasLabel
     case Footer = 'footer';
     case Single = 'single';
     case Archive = 'archive';
+    case NotFound = 'not_found';
 
     public function getLabel(): string
     {
@@ -22,6 +23,7 @@ enum ThemeRegionType: string implements HasColor, HasIcon, HasLabel
             self::Footer => 'Footer',
             self::Single => 'Single Post / Model',
             self::Archive => 'Archive / Listing',
+            self::NotFound => '404 Not Found',
         };
     }
 
@@ -32,6 +34,7 @@ enum ThemeRegionType: string implements HasColor, HasIcon, HasLabel
             self::Footer => 'info',
             self::Single => 'success',
             self::Archive => 'warning',
+            self::NotFound => 'danger',
         };
     }
 
@@ -42,6 +45,7 @@ enum ThemeRegionType: string implements HasColor, HasIcon, HasLabel
             self::Footer => 'heroicon-o-bars-3-bottom-right',
             self::Single => 'heroicon-o-document-text',
             self::Archive => 'heroicon-o-rectangle-stack',
+            self::NotFound => 'heroicon-o-exclamation-circle',
         };
     }
 }

@@ -42,6 +42,7 @@ class FilamentPageBuilderServiceProvider extends PackageServiceProvider
                 'create_fpb_theme_templates_table',
                 'create_fpb_form_submissions_table',
                 'create_fpb_popups_table',
+                'create_fpb_settings_table',
             ]);
     }
 
@@ -108,6 +109,7 @@ class FilamentPageBuilderServiceProvider extends PackageServiceProvider
         $registry->register(\KalimeroMK\FilamentPageBuilder\FormActions\EmailAction::class);
         $registry->register(\KalimeroMK\FilamentPageBuilder\FormActions\RedirectAction::class);
         $registry->register(\KalimeroMK\FilamentPageBuilder\FormActions\WebhookAction::class);
+        $registry->register(\KalimeroMK\FilamentPageBuilder\FormActions\AutoresponderAction::class);
     }
 
     protected function registerLivewireComponents(): void

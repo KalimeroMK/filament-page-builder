@@ -38,7 +38,7 @@ enum ThemeRegionType: string implements HasColor, HasIcon, HasLabel
     public function getIcon(): ?string
     {
         return match ($this) {
-            self::Header => 'heroicon-o-bars-3-top-left',
+            self::Header => 'heroicon-o-bars-3',
             self::Footer => 'heroicon-o-bars-3-bottom-right',
             self::Single => 'heroicon-o-document-text',
             self::Archive => 'heroicon-o-rectangle-stack',

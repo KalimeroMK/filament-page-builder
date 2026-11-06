@@ -10,6 +10,11 @@ use KalimeroMK\FilamentPageBuilder\Models\ThemeTemplate;
 use Livewire\Livewire;
 
 it('resolves and renders Theme Builder regions (Header, Footer, Single, Archive) with Include/Exclude conditions and priorities', function (): void {
+    // All ThemeRegionType icons must resolve without SvgNotFound
+    foreach (ThemeRegionType::cases() as $regionCase) {
+        expect(svg($regionCase->getIcon())->toHtml())->toContain('<svg');
+    }
+
     // 1. Global Header (priority 10) for entire site EXCEPT page_slug = 'checkout' (and an empty exclude rule that must be ignored)
     $globalHeader = ThemeTemplate::create([
         'title' => 'Global Header',

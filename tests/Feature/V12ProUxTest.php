@@ -73,6 +73,45 @@ it('applies motion, sticky and device visibility classes in widgets', function (
         ->toContain('--fpb-sticky-offset: 20px;');
 });
 
+it('renders container background images with parallax and rejects unsafe URLs', function (): void {
+    $rendered = PageBuilder::renderSchema([
+        'version' => 1,
+        'elements' => [
+            [
+                'id' => 'parallax_hero',
+                'type' => 'container',
+                'settings' => [
+                    'background_image' => 'https://images.example.com/hero.jpg?fit=crop&w=1600',
+                    'background_size' => 'cover',
+                    'background_position' => 'center',
+                    'background_repeat' => 'no-repeat',
+                    'background_attachment' => 'fixed',
+                ],
+            ],
+            [
+                'id' => 'unsafe_background',
+                'type' => 'container',
+                'settings' => ['background_image' => 'javascript:alert(1)'],
+            ],
+            [
+                'id' => 'css_background',
+                'type' => 'container',
+                'settings' => ['background_image' => 'https://example.com/bad");color:red;/*'],
+            ],
+        ],
+    ]);
+
+    expect($rendered->css)
+        ->toContain('background-image: var(--fpb-bg-image, none);')
+        ->toContain('--fpb-bg-image: url("https://images.example.com/hero.jpg?fit=crop&w=1600");')
+        ->toContain('--fpb-bg-size: cover;')
+        ->toContain('--fpb-bg-position: center;')
+        ->toContain('--fpb-bg-repeat: no-repeat;')
+        ->toContain('--fpb-bg-attachment: fixed;')
+        ->not->toContain('javascript:')
+        ->not->toContain('color:red');
+});
+
 it('registers custom fonts and custom icons with sanitization', function (): void {
     $assets = app(CustomAssetsService::class);
 

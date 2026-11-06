@@ -171,7 +171,11 @@ class LoopQueryBuilder
             return true;
         }
 
-        $modelFields = $allowedFields[$modelClass] ?? $allowedFields['*'] ?? [];
+        $modelFields = $allowedFields[$modelClass] ?? $allowedFields['*'] ?? null;
+
+        if ($modelFields === null) {
+            return true;
+        }
 
         return $modelFields !== [] && in_array($field, $modelFields, true);
     }

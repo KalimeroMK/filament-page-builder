@@ -54,10 +54,10 @@ interface WidgetContract
     public function getSchema(Schema $schema): Schema;
 
     /**
-     * Maps setting keys to CSS custom property names and units.
+     * Maps setting keys to CSS custom property names, units and value formats.
      * Example: ['padding' => ['var' => '--fpb-pad', 'unit' => 'px']]
      *
-     * @return array<string, array{var: string, unit?: string}>
+     * @return array<string, array{var: string, unit?: string, format?: string}>
      */
     public function getCssMap(): array;
 

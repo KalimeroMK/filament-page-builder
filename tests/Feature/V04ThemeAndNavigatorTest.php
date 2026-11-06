@@ -187,6 +187,16 @@ it('displays the Navigator element tree and toggles element visibility in Visual
         ->assertSee('#' . $containerId)
         ->assertSee('#' . $headingId);
 
+    $editor->call('selectElement', $containerId)
+        ->call('updateActiveElementSettings', ['admin_label' => 'Featured stories'])
+        ->call('selectElement', $headingId)
+        ->call('updateActiveElementSettings', ['admin_label' => 'Main headline'])
+        ->call('setLeftTab', 'navigator')
+        ->assertSee('Featured stories · Flex Container')
+        ->assertSee('Main headline')
+        ->assertSee('Heading')
+        ->assertSee('border-left: 2px solid #dbeafe;', false);
+
     // Toggle visibility of the heading via Navigator
     $editor->call('toggleElementVisibility', $headingId);
     $schemaAfterHide = $editor->get('schema');

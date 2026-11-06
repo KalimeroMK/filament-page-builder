@@ -9,6 +9,8 @@
     $hasChildren = $isContainer && $depthInt < 20 && ! empty($element['children']) && is_array($element['children']);
     $isSelected = $activeElementId === $elId;
     $isHidden = ! empty($element['settings']['hide_element']);
+    $editorLabel = trim((string) ($element['settings']['admin_label'] ?? ''));
+    $widgetLabel = $widget ? $widget::getLabel() : ucfirst($elType);
 @endphp
 <div wire:key="nav-node-{{ $depthInt }}-{{ $elId }}" x-data="{ expanded: true }" style="margin-bottom: 4px;">
     <div
@@ -28,9 +30,11 @@
                 <span style="display: inline-block; width: 12px; color: #94a3b8;">•</span>
             @endif
             <span style="font-weight: 600; {{ $isHidden ? 'text-decoration: line-through;' : '' }}">
-                {{ $widget ? $widget::getLabel() : ucfirst($elType) }}
+                {{ $editorLabel !== '' ? $editorLabel : $widgetLabel }}
             </span>
-            <span style="font-size: 10px; color: #64748b;">#{{ $elId }}</span>
+            <span style="font-size: 10px; color: #64748b;">
+                {{ $editorLabel !== '' ? $widgetLabel : '#'.$elId }}
+            </span>
         </div>
 
         <div style="display: inline-flex; align-items: center; gap: 4px;">
@@ -64,7 +68,7 @@
     </div>
 
     @if($hasChildren)
-        <div x-show="expanded" style="margin-top: 4px;">
+        <div x-show="expanded" style="margin-top: 4px; margin-left: 10px; padding-left: 5px; border-left: 2px solid #dbeafe;">
             @foreach($element['children'] as $child)
                 @if(is_array($child))
                     @include('filament-page-builder::livewire.partials.navigator-tree-node', [

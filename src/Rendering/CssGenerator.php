@@ -47,6 +47,11 @@ class CssGenerator
     align-items: var(--fpb-align, stretch);
     justify-content: var(--fpb-justify, flex-start);
     background-color: var(--fpb-bg, transparent);
+    background-image: var(--fpb-bg-image, none);
+    background-size: var(--fpb-bg-size, cover);
+    background-position: var(--fpb-bg-position, center);
+    background-repeat: var(--fpb-bg-repeat, no-repeat);
+    background-attachment: var(--fpb-bg-attachment, scroll);
     border-radius: var(--fpb-radius, 0px);
     max-width: var(--fpb-max-width, 100%);
     width: 100%;
@@ -325,10 +330,11 @@ CSS;
             }
 
             $unit = $definition['unit'] ?? '';
+            $format = $definition['format'] ?? '';
 
-            $desktopVal = $this->formatCssValue($this->extractResponsiveValue($settings, $settingKey, 'desktop'), $unit);
-            $tabletVal = $this->formatCssValue($this->extractResponsiveValue($settings, $settingKey, 'tablet'), $unit);
-            $mobileVal = $this->formatCssValue($this->extractResponsiveValue($settings, $settingKey, 'mobile'), $unit);
+            $desktopVal = $this->formatCssValue($this->extractResponsiveValue($settings, $settingKey, 'desktop'), $unit, $format);
+            $tabletVal = $this->formatCssValue($this->extractResponsiveValue($settings, $settingKey, 'tablet'), $unit, $format);
+            $mobileVal = $this->formatCssValue($this->extractResponsiveValue($settings, $settingKey, 'mobile'), $unit, $format);
 
             if ($desktopVal !== '') {
                 $desktopDecls[] = "{$cssVar}: {$desktopVal};";
@@ -419,7 +425,7 @@ CSS;
         return $css;
     }
 
-    protected function formatCssValue(mixed $value, string $unit): string
+    protected function formatCssValue(mixed $value, string $unit, string $format = ''): string
     {
         if ($value === null || (! is_scalar($value) && ! $value instanceof Stringable)) {
             return '';
@@ -429,6 +435,19 @@ CSS;
 
         if ($str === '') {
             return '';
+        }
+
+        if ($format === 'url') {
+            $url = \KalimeroMK\FilamentPageBuilder\Support\HtmlSanitizer::sanitizeUrl($str, '');
+
+            if ($url === ''
+                || (! str_starts_with($url, '/') && ! preg_match('/^https?:\/\//i', $url))
+                || preg_match('/[\s\x22\x27()\\\\<>{};]/', $url)
+            ) {
+                return '';
+            }
+
+            return 'url("' . $url . '")';
         }
 
         // Strip characters and sequences that could break out of a CSS declaration or load external resources

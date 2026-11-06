@@ -26,6 +26,7 @@ use KalimeroMK\FilamentPageBuilder\Enums\ThemeRegionType;
 use KalimeroMK\FilamentPageBuilder\Filament\Resources\ThemeTemplateResource\Pages\CreateThemeTemplate;
 use KalimeroMK\FilamentPageBuilder\Filament\Resources\ThemeTemplateResource\Pages\EditThemeTemplate;
 use KalimeroMK\FilamentPageBuilder\Filament\Resources\ThemeTemplateResource\Pages\ListThemeTemplates;
+use KalimeroMK\FilamentPageBuilder\Filament\Resources\ThemeTemplateResource\Pages\VisualBuilderThemeTemplate;
 use KalimeroMK\FilamentPageBuilder\FilamentPageBuilderPlugin;
 use KalimeroMK\FilamentPageBuilder\Models\ThemeTemplate;
 use UnitEnum;
@@ -85,7 +86,7 @@ class ThemeTemplateResource extends Resource
             return FilamentPageBuilderPlugin::get()->getNavigationGroup();
         }
 
-        return 'Content';
+        return 'Page Builder';
     }
 
     public static function getNavigationSort(): ?int
@@ -207,7 +208,20 @@ class ThemeTemplateResource extends Resource
                 SelectFilter::make('status')
                     ->options(PageStatus::class),
             ])
+            ->recordUrl(fn (ThemeTemplate $record): ?string => static::canEdit($record)
+                ? static::getUrl('builder', ['record' => $record])
+                : null)
             ->recordActions([
+                Action::make('visual_builder')
+                    ->label('Visual Builder')
+                    ->icon('heroicon-o-squares-plus')
+                    ->color('primary')
+                    ->visible(fn (ThemeTemplate $record): bool => static::canEdit($record))
+                    ->url(fn (ThemeTemplate $record): string => static::getUrl('builder', ['record' => $record])),
+                EditAction::make()
+                    ->label('Advanced')
+                    ->icon('heroicon-o-code-bracket')
+                    ->color('gray'),
                 Action::make('publish')
                     ->label('Publish')
                     ->icon('heroicon-o-rocket-launch')
@@ -223,7 +237,6 @@ class ThemeTemplateResource extends Resource
                             ->success()
                             ->send();
                     }),
-                EditAction::make(),
                 DeleteAction::make(),
             ]);
     }
@@ -234,6 +247,7 @@ class ThemeTemplateResource extends Resource
             'index' => ListThemeTemplates::route('/'),
             'create' => CreateThemeTemplate::route('/create'),
             'edit' => EditThemeTemplate::route('/{record}/edit'),
+            'builder' => VisualBuilderThemeTemplate::route('/{record}/builder'),
         ];
     }
 }

@@ -142,6 +142,44 @@ class Page extends Model
         return $draft !== $this->getPublishedSchema();
     }
 
+    public function themeName(): string
+    {
+        $theme = trim((string) ($this->meta['theme'] ?? ''));
+
+        return $theme !== '' ? $theme : 'Default';
+    }
+
+    public function parentSlug(): ?string
+    {
+        $parent = trim((string) ($this->meta['parent_slug'] ?? ''));
+
+        return $parent !== '' ? $parent : null;
+    }
+
+    public function hierarchyDepth(): int
+    {
+        $depth = 0;
+        $parentSlug = $this->parentSlug();
+        $visited = [$this->slug];
+
+        while ($parentSlug !== null && $depth < 10 && ! in_array($parentSlug, $visited, true)) {
+            $visited[] = $parentSlug;
+            $parent = static::query()
+                ->select(['id', 'slug', 'meta'])
+                ->where('slug', $parentSlug)
+                ->first();
+
+            if ($parent === null) {
+                break;
+            }
+
+            $depth++;
+            $parentSlug = $parent->parentSlug();
+        }
+
+        return $depth;
+    }
+
     /**
      * Returns the working draft schema used in the editor and live preview.
      *

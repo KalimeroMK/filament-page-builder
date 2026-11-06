@@ -51,6 +51,11 @@ class ContainerWidget extends AbstractWidget
             'justify_content' => 'flex-start',
             'max_width' => '100%',
             'background_color' => null,
+            'background_image' => '',
+            'background_size' => 'cover',
+            'background_position' => 'center',
+            'background_repeat' => 'no-repeat',
+            'background_attachment' => 'scroll',
             'border_radius' => 0,
             'padding' => 24,
         ]);
@@ -66,6 +71,11 @@ class ContainerWidget extends AbstractWidget
             'justify_content' => ['var' => '--fpb-justify'],
             'max_width' => ['var' => '--fpb-max-width', 'unit' => 'px'],
             'background_color' => ['var' => '--fpb-bg'],
+            'background_image' => ['var' => '--fpb-bg-image', 'format' => 'url'],
+            'background_size' => ['var' => '--fpb-bg-size'],
+            'background_position' => ['var' => '--fpb-bg-position'],
+            'background_repeat' => ['var' => '--fpb-bg-repeat'],
+            'background_attachment' => ['var' => '--fpb-bg-attachment'],
             'border_radius' => ['var' => '--fpb-radius', 'unit' => 'px'],
         ]);
     }
@@ -158,6 +168,41 @@ class ContainerWidget extends AbstractWidget
         return [
             ColorPicker::make('background_color')
                 ->label('Background Color'),
+            TextInput::make('background_image')
+                ->label('Background Image URL')
+                ->placeholder('https://example.com/background.jpg'),
+            Grid::make(2)->schema([
+                Select::make('background_size')
+                    ->label('Background Size')
+                    ->options(['cover' => 'Cover', 'contain' => 'Contain', 'auto' => 'Auto'])
+                    ->default('cover'),
+                Select::make('background_position')
+                    ->label('Background Position')
+                    ->options([
+                        'center' => 'Center',
+                        'top' => 'Top',
+                        'bottom' => 'Bottom',
+                        'left' => 'Left',
+                        'right' => 'Right',
+                    ])
+                    ->default('center'),
+            ]),
+            Grid::make(2)->schema([
+                Select::make('background_repeat')
+                    ->label('Background Repeat')
+                    ->options([
+                        'no-repeat' => 'No Repeat',
+                        'repeat' => 'Repeat',
+                        'repeat-x' => 'Repeat Horizontally',
+                        'repeat-y' => 'Repeat Vertically',
+                    ])
+                    ->default('no-repeat'),
+                Select::make('background_attachment')
+                    ->label('Background Attachment')
+                    ->options(['scroll' => 'Scroll', 'fixed' => 'Fixed (Parallax)'])
+                    ->default('scroll')
+                    ->helperText('Fixed creates a CSS parallax effect on supporting browsers.'),
+            ]),
             TextInput::make('border_radius')
                 ->label('Border Radius (px)')
                 ->numeric()

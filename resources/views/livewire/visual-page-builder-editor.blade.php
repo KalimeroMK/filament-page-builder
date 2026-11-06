@@ -7,6 +7,11 @@
     $activeIdSafe = $activeElement !== null
         ? (preg_replace('/[^a-zA-Z0-9_-]/', '', (string) ($activeElement['id'] ?? '')) ?: 'el')
         : null;
+    $editorTabs = ['widgets' => '+ Blocks', 'inspector' => 'Edit', 'navigator' => 'Tree', 'templates' => 'Library'];
+    if (! $isThemeTemplate) {
+        $editorTabs['revisions'] = 'History';
+    }
+    $editorTabs['page_settings'] = $isThemeTemplate ? 'Settings' : 'SEO';
 @endphp
 <div
     class="fpb-visual-editor"
@@ -175,14 +180,16 @@
                 Save Draft
             </button>
 
-            <a
-                href="{{ $previewUrl }}"
-                target="_blank"
-                rel="noopener noreferrer"
-                style="padding: 7px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; background: #334155; color: #f8fafc; text-decoration: none; border: 1px solid #475569;"
-            >
-                Preview
-            </a>
+            @if($previewUrl !== null)
+                <a
+                    href="{{ $previewUrl }}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style="padding: 7px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; background: #334155; color: #f8fafc; text-decoration: none; border: 1px solid #475569;"
+                >
+                    Preview
+                </a>
+            @endif
 
             <button
                 type="button"
@@ -199,8 +206,8 @@
         {{-- Left Sidebar Panel --}}
         <aside style="width: 360px; min-width: 360px; background: #ffffff; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column;">
             {{-- Sidebar Mode Switcher --}}
-            <div style="display: grid; grid-template-columns: repeat(6, 1fr); border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
-                @foreach(['widgets' => '+ Blocks', 'inspector' => 'Edit', 'navigator' => 'Tree', 'templates' => 'Library', 'revisions' => 'History', 'page_settings' => 'SEO'] as $tabKey => $tabLabel)
+            <div style="display: grid; grid-template-columns: repeat({{ count($editorTabs) }}, 1fr); border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
+                @foreach($editorTabs as $tabKey => $tabLabel)
                     <button
                         type="button"
                         wire:click="setLeftTab('{{ $tabKey }}')"
@@ -496,48 +503,54 @@
                 @if($leftTab === 'page_settings')
                     <div style="display: flex; flex-direction: column; gap: 12px;">
                         <div>
-                            <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Page Title</label>
+                            <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">{{ $isThemeTemplate ? 'Template Name' : 'Page Title' }}</label>
                             <input type="text" wire:model.live="pageSettingsData.title" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;" />
                             @error('pageSettingsData.title')
                                 <div style="color: #dc2626; font-size: 11px; margin-top: 4px;">{{ $message }}</div>
                             @enderror
                         </div>
-                        <div>
-                            <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">URL Slug</label>
-                            <input type="text" wire:model.live="pageSettingsData.slug" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;" />
-                            @error('pageSettingsData.slug')
-                                <div style="color: #dc2626; font-size: 11px; margin-top: 4px;">{{ $message }}</div>
-                            @enderror
-                        </div>
-                        <div>
-                            <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Layout</label>
-                            <select wire:model.live="pageSettingsData.layout" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
-                                @foreach($availableLayouts as $layoutKey)
-                                    <option value="{{ $layoutKey }}">{{ ucfirst(str_replace('_', ' ', (string) $layoutKey)) }}</option>
-                                @endforeach
-                            </select>
-                            @error('pageSettingsData.layout')
-                                <div style="color: #dc2626; font-size: 11px; margin-top: 4px;">{{ $message }}</div>
-                            @enderror
-                        </div>
-                        <div>
-                            <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">SEO Meta Title</label>
-                            <input type="text" wire:model.live="pageSettingsData.meta_title" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;" />
-                        </div>
-                        <div>
-                            <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">SEO Meta Description</label>
-                            <textarea rows="3" wire:model.live="pageSettingsData.meta_description" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;"></textarea>
-                        </div>
-                        <div>
-                            <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">OpenGraph Image URL</label>
-                            <input type="text" wire:model.live="pageSettingsData.og_image" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;" />
-                        </div>
-                        <div>
-                            <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">
-                                <input type="checkbox" wire:model.live="pageSettingsData.noindex" />
-                                <span>Discourage search engines (noindex)</span>
-                            </label>
-                        </div>
+                        @if($isThemeTemplate)
+                            <div style="padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 12px; color: #64748b;">
+                                Region, priority and display conditions are available in the Advanced form.
+                            </div>
+                        @else
+                            <div>
+                                <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">URL Slug</label>
+                                <input type="text" wire:model.live="pageSettingsData.slug" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;" />
+                                @error('pageSettingsData.slug')
+                                    <div style="color: #dc2626; font-size: 11px; margin-top: 4px;">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Layout</label>
+                                <select wire:model.live="pageSettingsData.layout" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
+                                    @foreach($availableLayouts as $layoutKey)
+                                        <option value="{{ $layoutKey }}">{{ ucfirst(str_replace('_', ' ', (string) $layoutKey)) }}</option>
+                                    @endforeach
+                                </select>
+                                @error('pageSettingsData.layout')
+                                    <div style="color: #dc2626; font-size: 11px; margin-top: 4px;">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">SEO Meta Title</label>
+                                <input type="text" wire:model.live="pageSettingsData.meta_title" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;" />
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">SEO Meta Description</label>
+                                <textarea rows="3" wire:model.live="pageSettingsData.meta_description" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;"></textarea>
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">OpenGraph Image URL</label>
+                                <input type="text" wire:model.live="pageSettingsData.og_image" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;" />
+                            </div>
+                            <div>
+                                <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">
+                                    <input type="checkbox" wire:model.live="pageSettingsData.noindex" />
+                                    <span>Discourage search engines (noindex)</span>
+                                </label>
+                            </div>
+                        @endif
                     </div>
                 @endif
             </div>

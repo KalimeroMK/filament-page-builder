@@ -92,8 +92,9 @@ You get a **Livewire v4 visual editor** inside Filament where users drag widgets
 
 | Area | What you get |
 | --- | --- |
-| **Visual Editor** | Drag & drop canvas, nested Flexbox containers, Content/Style/Advanced inspector, Navigator element tree, Undo/Redo, Copy/Paste, Duplicate, Hide/Show, responsive viewport switcher |
+| **Visual Editor** | Drag & drop canvas, nested Flexbox containers, Content/Style/Advanced inspector, labeled Navigator element tree, Editor Labels, Undo/Redo, Copy/Paste, Duplicate, Hide/Show, responsive viewport switcher |
 | **Workflow** | Draft vs Published, signed Preview URLs, Publish with revisions, Discard Draft, Unpublish, Restore Revision |
+| **Posts & Categories** | Built-in Eloquent models and Filament resources, featured image uploads, publishing states, category relationships and optional starter content |
 | **17 Widgets** | Container, Heading, Rich Text, Button, Image, Spacer/Divider, Icon, Video, HTML Embed, Image Gallery, Alert, Accordion, Tabs, Testimonial, Loop Builder, Form Builder |
 | **Theme Builder** | Header/Footer/Single/Archive templates with include/exclude display conditions (path, route, page slug, model) |
 | **Dynamic Content** | Dynamic Tags (`page.title`, `model.attribute:*`, `site.current_date`) + Loop Builder for Eloquent collections with filters/ordering/sub-templates |
@@ -119,14 +120,21 @@ You get a **Livewire v4 visual editor** inside Filament where users drag widgets
 composer require kalimeromk/filament-page-builder
 ```
 
-### 2. Publish and run migrations
+### 2. Install the package
 
 ```bash
-php artisan vendor:publish --tag="filament-page-builder-migrations"
-php artisan migrate
+php artisan fpb:install
 ```
 
-This creates the tables: `fpb_pages`, `fpb_page_revisions`, `fpb_templates`, `fpb_theme_templates`, `fpb_form_submissions`, `fpb_popups`.
+This publishes the configuration and migrations, runs `migrate`, and seeds **3 starter categories, 9 published posts and a News page** with a working Loop Builder query. Existing pages and posts are never overwritten when the installer or starter seeder runs again.
+
+To install only the package structure without starter content:
+
+```bash
+php artisan fpb:install --without-content
+```
+
+The tables are: `fpb_pages`, `fpb_page_revisions`, `fpb_templates`, `fpb_theme_templates`, `fpb_form_submissions`, `fpb_popups`, `fpb_settings`, `fpb_menus`, `fpb_categories`, `fpb_posts`.
 
 ### 3. Register the plugin in your panel
 

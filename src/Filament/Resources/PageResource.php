@@ -90,7 +90,7 @@ class PageResource extends Resource
             return FilamentPageBuilderPlugin::get()->getNavigationGroup();
         }
 
-        return 'Content';
+        return 'Page Builder';
     }
 
     public static function getNavigationSort(): ?int
@@ -110,7 +110,7 @@ class PageResource extends Resource
             Tabs::make('page_tabs')
                 ->columnSpanFull()
                 ->tabs([
-                    Tab::make('General & Draft Builder')
+                    Tab::make('General')
                         ->icon('heroicon-o-squares-2x2')
                         ->schema([
                             Section::make('Page Details')
@@ -152,19 +152,24 @@ class PageResource extends Resource
                                             ->required(),
                                     ]),
                                 ]),
-                            Section::make('Draft Schema (Working Copy)')
-                                ->description('All edits here are saved to draft_content first. Use Preview to inspect and Publish to push live.')
+                            Section::make('Theme & Hierarchy')
+                                ->description('Group related pages by theme and optionally nest a page below another page in the Pages table.')
                                 ->schema([
-                                    CodeEditor::make('draft_content_json')
-                                        ->label('Draft JSON Schema (v1)')
-                                        ->language(Language::Json)
-                                        ->json()
-                                        ->rule(static fn (): \Closure => function (string $attribute, mixed $value, \Closure $fail): void {
-                                            if (is_string($value) && trim($value) !== '' && ! is_array(json_decode($value, true))) {
-                                                $fail('The draft schema must be a valid JSON object.');
-                                            }
-                                        })
-                                        ->columnSpanFull(),
+                                    Grid::make(2)->schema([
+                                        TextInput::make('meta.theme')
+                                            ->label('Theme')
+                                            ->placeholder('Tailnews')
+                                            ->maxLength(100),
+                                        Select::make('meta.parent_slug')
+                                            ->label('Parent Page')
+                                            ->placeholder('No parent (root page)')
+                                            ->options(fn (?Page $record): array => static::getModel()::query()
+                                                ->when($record, fn ($query) => $query->where('slug', '!=', $record->slug))
+                                                ->orderBy('title')
+                                                ->pluck('title', 'slug')
+                                                ->toArray())
+                                            ->searchable(),
+                                    ]),
                                 ]),
                         ]),
                     Tab::make('SEO & Meta')
@@ -185,6 +190,24 @@ class PageResource extends Resource
                                         ->default(false),
                                 ]),
                         ]),
+                    Tab::make('Advanced')
+                        ->icon('heroicon-o-code-bracket')
+                        ->schema([
+                            Section::make('Draft JSON Schema')
+                                ->description('Advanced editing for developers. Visual Builder is the default way to edit pages; changes here are saved to draft_content first.')
+                                ->schema([
+                                    CodeEditor::make('draft_content_json')
+                                        ->label('Draft JSON Schema (v1)')
+                                        ->language(Language::Json)
+                                        ->json()
+                                        ->rule(static fn (): \Closure => function (string $attribute, mixed $value, \Closure $fail): void {
+                                            if (is_string($value) && trim($value) !== '' && ! is_array(json_decode($value, true))) {
+                                                $fail('The draft schema must be a valid JSON object.');
+                                            }
+                                        })
+                                        ->columnSpanFull(),
+                                ]),
+                        ]),
                 ]),
         ]);
     }
@@ -194,7 +217,20 @@ class PageResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('title')
+                    ->state(function (Page $record): string {
+                        $depth = $record->hierarchyDepth();
+
+                        return $depth > 0
+                            ? str_repeat('│   ', $depth - 1).'└─ '.$record->title
+                            : $record->title;
+                    })
                     ->searchable()
+                    ->sortable(),
+                TextColumn::make('meta.theme')
+                    ->label('Theme')
+                    ->state(fn (Page $record): string => $record->themeName())
+                    ->badge()
+                    ->color('info')
                     ->sortable(),
                 TextColumn::make('slug')
                     ->searchable()
@@ -221,6 +257,15 @@ class PageResource extends Resource
                 SelectFilter::make('status')
                     ->options(PageStatus::class),
             ])
+            ->groups([
+                \Filament\Tables\Grouping\Group::make('meta.theme')
+                    ->label('Theme')
+                    ->getTitleFromRecordUsing(fn (Page $record): string => $record->themeName())
+                    ->collapsible(),
+            ])
+            ->recordUrl(fn (Page $record): ?string => static::canEdit($record)
+                ? static::getUrl('builder', ['record' => $record])
+                : null)
             ->recordActions([
                 Action::make('visual_builder')
                     ->label('Visual Builder')
@@ -228,6 +273,10 @@ class PageResource extends Resource
                     ->color('primary')
                     ->visible(fn (Page $record): bool => static::canEdit($record))
                     ->url(fn (Page $record): string => static::getUrl('builder', ['record' => $record])),
+                EditAction::make()
+                    ->label('Advanced')
+                    ->icon('heroicon-o-code-bracket')
+                    ->color('gray'),
                 Action::make('preview')
                     ->label('Preview Draft')
                     ->icon('heroicon-o-eye')
@@ -248,7 +297,6 @@ class PageResource extends Resource
                             ->success()
                             ->send();
                     }),
-                EditAction::make(),
                 DeleteAction::make(),
             ]);
     }

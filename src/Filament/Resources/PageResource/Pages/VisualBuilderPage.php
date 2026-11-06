@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace KalimeroMK\FilamentPageBuilder\Filament\Resources\PageResource\Pages;
 
+use Filament\Actions\Action;
 use Filament\Resources\Pages\Concerns\InteractsWithRecord;
 use Filament\Resources\Pages\Page as ResourcePage;
 use KalimeroMK\FilamentPageBuilder\Filament\Resources\PageResource;
@@ -35,6 +36,17 @@ class VisualBuilderPage extends ResourcePage
     protected function authorizeAccess(): void
     {
         abort_unless(static::getResource()::canEdit($this->getRecord()), 403);
+    }
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('advanced')
+                ->label('Advanced')
+                ->icon('heroicon-o-code-bracket')
+                ->color('gray')
+                ->url(fn (): string => PageResource::getUrl('edit', ['record' => $this->record])),
+        ];
     }
 
     public function getTitle(): string

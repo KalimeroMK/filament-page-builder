@@ -33,6 +33,7 @@ it('registers and renders all 6 v0.3 widgets (html, image_gallery, alert, accord
                 'settings' => [
                     'images' => [
                         ['src' => 'https://example.com/1.jpg', 'alt' => 'Slide 1', 'caption' => 'Прва слика'],
+                        ['src' => 'https://example.com/2.jpg', 'alt' => 'Slide 2', 'caption' => 'Втора слика'],
                     ],
                     'columns' => 4,
                     'columns_mobile' => 1,
@@ -82,6 +83,8 @@ it('registers and renders all 6 v0.3 widgets (html, image_gallery, alert, accord
         ->toContain('Safe HTML')
         ->not->toContain('<script>')
         ->toContain('Прва слика')
+        ->toContain('Втора слика')
+        ->toContain('https://example.com/2.jpg')
         ->toContain('Успешна акција')
         ->toContain('Прашање 1')
         ->toContain('Таб А')

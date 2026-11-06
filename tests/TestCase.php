@@ -67,5 +67,11 @@ class TestCase extends Orchestra
 
         $createMenus = include __DIR__ . '/../database/migrations/create_fpb_menus_table.php.stub';
         $createMenus->up();
+
+        $createCategories = include __DIR__ . '/../database/migrations/create_fpb_categories_table.php.stub';
+        $createCategories->up();
+
+        $createPosts = include __DIR__ . '/../database/migrations/create_fpb_posts_table.php.stub';
+        $createPosts->up();
     }
 }

@@ -10,6 +10,8 @@
     $widget = $registry->get($elType);
     $isContainer = $widget !== null && $widget::isContainer();
     $settings = array_merge($widget ? $widget::getDefaultSettings() : [], is_array($element['settings'] ?? null) ? $element['settings'] : []);
+    $editorLabel = trim((string) ($settings['admin_label'] ?? ''));
+    $widgetLabel = $widget ? $widget::getLabel() : ucfirst($elType);
 @endphp
 <div
     wire:key="canvas-el-{{ $elId }}"
@@ -22,7 +24,7 @@
 >
     {{-- Element Floating Badge & Quick Actions --}}
     <div style="display: flex; align-items: center; justify-content: space-between; background: {{ $isSelected ? '#2563eb' : '#e2e8f0' }}; color: {{ $isSelected ? '#ffffff' : '#334155' }}; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px 4px 0 0;">
-        <span>{{ $widget ? $widget::getLabel() : ucfirst($elType) }} ({{ $elId }})</span>
+        <span>{{ $editorLabel !== '' ? $editorLabel.' · '.$widgetLabel : $widgetLabel.' ('.$elId.')' }}</span>
         <span style="display: inline-flex; gap: 6px;">
             @if($isContainer)
                 <button

@@ -43,6 +43,7 @@ abstract class AbstractWidget implements WidgetContract
             'margin_bottom' => 0,
             'css_classes' => '',
             'element_id' => '',
+            'admin_label' => '',
             'hide_element' => false,
             'animation' => 'none',
             'sticky' => 'none',
@@ -101,6 +102,10 @@ abstract class AbstractWidget implements WidgetContract
                     ->label('CSS Classes')
                     ->placeholder('custom-class another-class'),
             ]),
+            TextInput::make('admin_label')
+                ->label('Editor Label')
+                ->placeholder('Featured stories')
+                ->helperText('Shown only in the builder Navigator and canvas badge.'),
             Toggle::make('hide_element')
                 ->label('Hide Element')
                 ->default(false),

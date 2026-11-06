@@ -39,4 +39,9 @@ class CreateThemeTemplate extends CreateRecord
 
         return $record;
     }
+
+    protected function getRedirectUrl(): string
+    {
+        return static::getResource()::getUrl('builder', ['record' => $this->record]);
+    }
 }

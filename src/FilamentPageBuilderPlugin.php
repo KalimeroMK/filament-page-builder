@@ -17,7 +17,7 @@ class FilamentPageBuilderPlugin implements Plugin
 
     protected bool $hasThemeTemplateResource = true;
 
-    protected string | UnitEnum | null $navigationGroup = 'Content';
+    protected string | UnitEnum | null $navigationGroup = 'Page Builder';
 
     protected ?int $navigationSort = 10;
 
@@ -89,6 +89,15 @@ class FilamentPageBuilderPlugin implements Plugin
 
     public function register(Panel $panel): void
     {
+        $navigationGroup = $this->getNavigationGroup();
+
+        if (is_string($navigationGroup) && $navigationGroup !== '') {
+            $panel->navigationGroups([
+                \Filament\Navigation\NavigationGroup::make($navigationGroup)
+                    ->collapsible(),
+            ]);
+        }
+
         $resources = [];
 
         if ($this->hasPageResource()) {
@@ -112,6 +121,8 @@ class FilamentPageBuilderPlugin implements Plugin
         $panel->resources([
             \KalimeroMK\FilamentPageBuilder\Filament\Resources\FormSubmissionResource::class,
             \KalimeroMK\FilamentPageBuilder\Filament\Resources\MenuResource::class,
+            \KalimeroMK\FilamentPageBuilder\Filament\Resources\CategoryResource::class,
+            \KalimeroMK\FilamentPageBuilder\Filament\Resources\PostResource::class,
         ]);
     }
 

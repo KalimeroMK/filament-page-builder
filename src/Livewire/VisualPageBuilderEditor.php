@@ -17,6 +17,7 @@ use Illuminate\Validation\ValidationException;
 use KalimeroMK\FilamentPageBuilder\Models\Page;
 use KalimeroMK\FilamentPageBuilder\Models\PageRevision;
 use KalimeroMK\FilamentPageBuilder\Models\PageTemplate;
+use KalimeroMK\FilamentPageBuilder\Models\ThemeTemplate;
 use KalimeroMK\FilamentPageBuilder\Registries\TemplateRegistry;
 use KalimeroMK\FilamentPageBuilder\Registries\WidgetRegistry;
 use KalimeroMK\FilamentPageBuilder\Rendering\CssGenerator;
@@ -35,6 +36,9 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
 
     #[Locked]
     public int | string $pageId;
+
+    #[Locked]
+    public string $editorType = 'page';
 
     /**
      * @var array{version: int, elements: array<int, array<string, mixed>>}
@@ -129,9 +133,21 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
     #[Locked]
     public bool $hasUnsavedEditorChanges = false;
 
-    public function mount(Page | int | string $page): void
+    public function mount(Page | ThemeTemplate | int | string $page, string $editorType = 'page'): void
     {
-        $record = $page instanceof Page ? $page : $this->resolvePageModel()::query()->findOrFail($page);
+        $this->editorType = $page instanceof ThemeTemplate || $editorType === 'theme_template'
+            ? 'theme_template'
+            : 'page';
+
+        if ($this->editorType === 'theme_template') {
+            $record = $page instanceof ThemeTemplate
+                ? $page
+                : $this->resolveThemeTemplateModel()::query()->findOrFail($page);
+        } else {
+            $record = $page instanceof Page
+                ? $page
+                : $this->resolvePageModel()::query()->findOrFail($page);
+        }
 
         $this->authorizePageAccess($record);
 
@@ -140,31 +156,37 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
         $this->fillPageSettingsFromRecord($record);
     }
 
-    public function getPageProperty(): Page
+    public function getPageProperty(): Page | ThemeTemplate
     {
-        /** @var Page $record */
-        $record = $this->resolvePageModel()::query()->findOrFail($this->pageId);
+        $model = $this->editorType === 'theme_template'
+            ? $this->resolveThemeTemplateModel()
+            : $this->resolvePageModel();
 
-        return $record;
+        return $model::query()->findOrFail($this->pageId);
     }
 
-    protected function authorizePageAccess(Page $page): void
+    public function isThemeTemplate(): bool
+    {
+        return $this->editorType === 'theme_template';
+    }
+
+    protected function authorizePageAccess(Page | ThemeTemplate $page): void
     {
         if (Gate::getPolicyFor($page) !== null) {
             Gate::authorize('update', $page);
         }
     }
 
-    protected function fillPageSettingsFromRecord(Page $record): void
+    protected function fillPageSettingsFromRecord(Page | ThemeTemplate $record): void
     {
         $this->pageSettingsData = [
             'title' => $record->title,
-            'slug' => $record->slug,
-            'layout' => $record->layout ?? 'default',
-            'meta_title' => $record->meta['meta_title'] ?? '',
-            'meta_description' => $record->meta['meta_description'] ?? '',
-            'og_image' => $record->meta['og_image'] ?? '',
-            'noindex' => (bool) ($record->meta['noindex'] ?? false),
+            'slug' => $record instanceof Page ? $record->slug : '',
+            'layout' => $record instanceof Page ? $record->layout ?? 'default' : 'default',
+            'meta_title' => $record instanceof Page ? $record->meta['meta_title'] ?? '' : '',
+            'meta_description' => $record instanceof Page ? $record->meta['meta_description'] ?? '' : '',
+            'og_image' => $record instanceof Page ? $record->meta['og_image'] ?? '' : '',
+            'noindex' => $record instanceof Page && (bool) ($record->meta['noindex'] ?? false),
         ];
     }
 
@@ -175,6 +197,17 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
     {
         /** @var class-string<Page> $model */
         $model = config('filament-page-builder.models.page', Page::class);
+
+        return $model;
+    }
+
+    /**
+     * @return class-string<ThemeTemplate>
+     */
+    protected function resolveThemeTemplateModel(): string
+    {
+        /** @var class-string<ThemeTemplate> $model */
+        $model = config('filament-page-builder.models.theme_template', ThemeTemplate::class);
 
         return $model;
     }
@@ -486,6 +519,10 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
      */
     public function restoreRevisionInEditor(int $revisionId): void
     {
+        if ($this->isThemeTemplate()) {
+            return;
+        }
+
         $page = $this->page;
         $this->authorizePageAccess($page);
 
@@ -564,6 +601,10 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
      */
     public function compareRevision(int $revisionId): void
     {
+        if ($this->isThemeTemplate()) {
+            return;
+        }
+
         $page = $this->page;
         $this->authorizePageAccess($page);
 
@@ -868,6 +909,10 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
 
     public function setLeftTab(string $tab): void
     {
+        if ($this->isThemeTemplate() && $tab === 'revisions') {
+            return;
+        }
+
         if (in_array($tab, ['widgets', 'inspector', 'navigator', 'templates', 'revisions', 'page_settings'], true)) {
             $this->leftTab = $tab;
         }
@@ -876,16 +921,18 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
     /**
      * Validate and persist the working editor state into `draft_content`.
      */
-    protected function persistDraft(): Page
+    protected function persistDraft(): Page | ThemeTemplate
     {
         $page = $this->page;
         $this->authorizePageAccess($page);
 
-        $allowedLayouts = array_keys((array) config('filament-page-builder.layouts', ['default' => 'default']));
+        $rules = [
+            'pageSettingsData.title' => ['required', 'string', 'max:255'],
+        ];
 
-        try {
-            $this->validate([
-                'pageSettingsData.title' => ['required', 'string', 'max:255'],
+        if ($page instanceof Page) {
+            $allowedLayouts = array_keys((array) config('filament-page-builder.layouts', ['default' => 'default']));
+            $rules = array_merge($rules, [
                 'pageSettingsData.slug' => [
                     'required',
                     'string',
@@ -899,6 +946,10 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
                 'pageSettingsData.og_image' => ['nullable', 'string', 'max:2048'],
                 'pageSettingsData.noindex' => ['boolean'],
             ]);
+        }
+
+        try {
+            $this->validate($rules);
         } catch (ValidationException $e) {
             $this->leftTab = 'page_settings';
 
@@ -906,6 +957,14 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
         }
 
         $page->title = trim((string) $this->pageSettingsData['title']);
+
+        if ($page instanceof ThemeTemplate) {
+            $page->saveDraft($this->schema);
+            $this->hasUnsavedEditorChanges = false;
+
+            return $page;
+        }
+
         $page->slug = trim((string) $this->pageSettingsData['slug']);
         $page->layout = (string) $this->pageSettingsData['layout'];
 
@@ -949,8 +1008,10 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
         $this->hasUnsavedEditorChanges = false;
 
         Notification::make()
-            ->title('Page published!')
-            ->body('Your draft is now live and a revision snapshot has been recorded.')
+            ->title($page instanceof ThemeTemplate ? 'Theme template published!' : 'Page published!')
+            ->body($page instanceof ThemeTemplate
+                ? 'Your template draft is now live.'
+                : 'Your draft is now live and a revision snapshot has been recorded.')
             ->success()
             ->send();
     }
@@ -1003,13 +1064,16 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
                 ? SchemaTreeManipulator::findElement($this->schema['elements'], $this->activeElementId)
                 : null,
             'generatedCss' => $generatedCss ?: $cssGenerator->baseStyles(),
-            'previewUrl' => $page->getPreviewUrl(),
+            'previewUrl' => $page instanceof Page ? $page->getPreviewUrl() : null,
             'savedTemplates' => $templateModel::query()->latest()->get(),
             'registeredTemplates' => $templateRegistry->all(),
-            'revisions' => $page->revisions()->limit(20)->get(),
-            'availableLayouts' => array_keys((array) config('filament-page-builder.layouts', ['default' => 'default'])),
+            'revisions' => $page instanceof Page ? $page->revisions()->limit(20)->get() : collect(),
+            'availableLayouts' => $page instanceof Page
+                ? array_keys((array) config('filament-page-builder.layouts', ['default' => 'default']))
+                : [],
             'availableDynamicTags' => $this->getAvailableDynamicTags(),
             'finderResults' => $this->finderResults,
+            'isThemeTemplate' => $this->isThemeTemplate(),
         ]);
     }
 

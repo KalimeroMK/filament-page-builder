@@ -35,6 +35,7 @@ class FilamentPageBuilderServiceProvider extends PackageServiceProvider
             ->hasConfigFile()
             ->hasViews()
             ->hasRoute('web')
+            ->hasCommand(\KalimeroMK\FilamentPageBuilder\Console\InstallCommand::class)
             ->hasMigrations([
                 'create_fpb_pages_table',
                 'create_fpb_page_revisions_table',
@@ -44,6 +45,8 @@ class FilamentPageBuilderServiceProvider extends PackageServiceProvider
                 'create_fpb_popups_table',
                 'create_fpb_settings_table',
                 'create_fpb_menus_table',
+                'create_fpb_categories_table',
+                'create_fpb_posts_table',
             ]);
     }
 

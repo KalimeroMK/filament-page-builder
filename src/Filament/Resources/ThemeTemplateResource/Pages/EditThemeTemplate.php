@@ -58,6 +58,12 @@ class EditThemeTemplate extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('visual_builder')
+                ->label('Visual Builder')
+                ->icon('heroicon-o-squares-plus')
+                ->color('primary')
+                ->url(fn (): string => ThemeTemplateResource::getUrl('builder', ['record' => $this->record])),
+
             Action::make('publish_template')
                 ->label('Publish Theme Template')
                 ->icon('heroicon-o-rocket-launch')

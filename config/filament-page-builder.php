@@ -47,6 +47,8 @@ return [
         'form_submission' => \KalimeroMK\FilamentPageBuilder\Models\FormSubmission::class,
         'popup' => \KalimeroMK\FilamentPageBuilder\Models\Popup::class,
         'menu' => \KalimeroMK\FilamentPageBuilder\Models\Menu::class,
+        'category' => \KalimeroMK\FilamentPageBuilder\Models\Category::class,
+        'post' => \KalimeroMK\FilamentPageBuilder\Models\Post::class,
     ],
 
     /*
@@ -63,6 +65,8 @@ return [
         'popups' => 'fpb_popups',
         'settings' => 'fpb_settings',
         'menus' => 'fpb_menus',
+        'categories' => 'fpb_categories',
+        'posts' => 'fpb_posts',
     ],
 
     /*
@@ -125,11 +129,15 @@ return [
     | Loop Builder Allowed Models
     |--------------------------------------------------------------------------
     | Restrict which Eloquent model classes can be used in the Loop Builder.
-    | Leave empty to allow any model.
+    | Leave empty to deny every model (fail closed).
     */
     'loop' => [
-        'allowed_models' => [],
-        'allowed_fields' => [],
+        'allowed_models' => [\KalimeroMK\FilamentPageBuilder\Models\Post::class],
+        'allowed_fields' => [
+            \KalimeroMK\FilamentPageBuilder\Models\Post::class => [
+                'id', 'category_id', 'title', 'slug', 'excerpt', 'body', 'image', 'author', 'status', 'published_at', 'created_at', 'updated_at',
+            ],
+        ],
     ],
 
     /*

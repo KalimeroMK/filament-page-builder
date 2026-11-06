@@ -43,7 +43,7 @@ class SiteKitPage extends Page implements HasSchemas
             return FilamentPageBuilderPlugin::get()->getNavigationGroup();
         }
 
-        return 'Content';
+        return 'Page Builder';
     }
 
     public static function getNavigationSort(): ?int

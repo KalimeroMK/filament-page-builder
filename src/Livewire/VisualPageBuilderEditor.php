@@ -94,6 +94,13 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
     public array $inspectorData = [];
 
     /**
+     * Dynamic tag bindings for the currently selected element.
+     *
+     * @var array<string, mixed>
+     */
+    public array $dynamicData = [];
+
+    /**
      * Page-level settings (Title, Slug, Layout, SEO Meta).
      *
      * @var array<string, mixed>
@@ -534,8 +541,57 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
         }
 
         $this->inspectorData = array_merge($defaults, $currentSettings);
+        $this->dynamicData = is_array($element['dynamic'] ?? null) ? $element['dynamic'] : [];
         $this->leftTab = 'inspector';
         $this->clearCachedInspectorSchema();
+    }
+
+    /**
+     * Bind a widget setting key to a dynamic tag descriptor (e.g. "model.attribute:title").
+     */
+    public function updateDynamicBinding(string $settingKey, string $descriptor): void
+    {
+        if ($this->activeElementId === null) {
+            return;
+        }
+
+        $safeKey = preg_replace('/[^a-zA-Z0-9_]/', '', $settingKey) ?? '';
+        if ($safeKey === '') {
+            return;
+        }
+
+        $trimmed = trim($descriptor);
+        if ($trimmed === '') {
+            unset($this->dynamicData[$safeKey]);
+        } else {
+            $this->dynamicData[$safeKey] = $trimmed;
+        }
+
+        $updated = SchemaTreeManipulator::updateElementDynamic(
+            $this->schema['elements'],
+            $this->activeElementId,
+            $this->dynamicData,
+        );
+
+        $this->applyElementsMutation($updated);
+    }
+
+    public function clearDynamicBinding(string $settingKey): void
+    {
+        if ($this->activeElementId === null) {
+            return;
+        }
+
+        $safeKey = preg_replace('/[^a-zA-Z0-9_]/', '', $settingKey) ?? '';
+        unset($this->dynamicData[$safeKey]);
+
+        $updated = SchemaTreeManipulator::updateElementDynamic(
+            $this->schema['elements'],
+            $this->activeElementId,
+            $this->dynamicData,
+        );
+
+        $this->applyElementsMutation($updated);
     }
 
     protected function clearCachedInspectorSchema(): void
@@ -862,6 +918,26 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
             'registeredTemplates' => $templateRegistry->all(),
             'revisions' => $page->revisions()->limit(20)->get(),
             'availableLayouts' => array_keys((array) config('filament-page-builder.layouts', ['default' => 'default'])),
+            'availableDynamicTags' => $this->getAvailableDynamicTags(),
         ]);
+    }
+
+    /**
+     * @return array<string, array{name: string, label: string, group: string}>
+     */
+    protected function getAvailableDynamicTags(): array
+    {
+        $tags = app(\KalimeroMK\FilamentPageBuilder\Registries\DynamicTagRegistry::class)->all();
+        $result = [];
+
+        foreach ($tags as $name => $tag) {
+            $result[$name] = [
+                'name' => $name,
+                'label' => $tag::getLabel(),
+                'group' => $tag::getGroup(),
+            ];
+        }
+
+        return $result;
     }
 }

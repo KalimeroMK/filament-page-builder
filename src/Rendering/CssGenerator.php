@@ -220,6 +220,19 @@ class CssGenerator
     color: var(--fpb-active-color, #2563eb);
     border-bottom-color: var(--fpb-active-color, #2563eb);
 }
+.fpb-loop--grid .fpb-loop-items {
+    display: grid;
+    grid-template-columns: repeat(var(--fpb-loop-cols, 3), minmax(0, 1fr));
+    gap: var(--fpb-gap, 20px);
+}
+.fpb-loop--list .fpb-loop-items {
+    display: flex;
+    flex-direction: column;
+    gap: var(--fpb-gap, 20px);
+}
+.fpb-loop-item {
+    min-width: 0;
+}
 .fpb-testimonial {
     background-color: var(--fpb-bg, #f8fafc);
     color: var(--fpb-color, #1e293b);

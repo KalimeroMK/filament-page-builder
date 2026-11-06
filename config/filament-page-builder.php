@@ -19,6 +19,7 @@ use KalimeroMK\FilamentPageBuilder\Widgets\TabsWidget;
 use KalimeroMK\FilamentPageBuilder\Widgets\TestimonialWidget;
 use KalimeroMK\FilamentPageBuilder\Widgets\TextWidget;
 use KalimeroMK\FilamentPageBuilder\Widgets\VideoWidget;
+use KalimeroMK\FilamentPageBuilder\Widgets\LoopWidget;
 
 return [
     /*
@@ -102,6 +103,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Loop Builder Allowed Models
+    |--------------------------------------------------------------------------
+    | Restrict which Eloquent model classes can be used in the Loop Builder.
+    | Leave empty to allow any model.
+    */
+    'loop' => [
+        'allowed_models' => [],
+        'allowed_fields' => [],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Core Registered Widgets
     |--------------------------------------------------------------------------
     */
@@ -120,5 +133,6 @@ return [
         AccordionWidget::class,
         TabsWidget::class,
         TestimonialWidget::class,
+        LoopWidget::class,
     ],
 ];

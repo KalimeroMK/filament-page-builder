@@ -229,6 +229,55 @@
                         <div wire:key="inspector-schema-{{ $activeIdSafe }}">
                             {{ $this->inspectorSchema }}
                         </div>
+
+                        {{-- Dynamic Tag Bindings (v0.5.0) --}}
+                        <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #e2e8f0;">
+                            <div style="font-size: 12px; font-weight: 700; margin-bottom: 8px; color: #0f172a;">
+                                Dynamic Tags
+                            </div>
+                            <div style="font-size: 11px; color: #64748b; margin-bottom: 8px;">
+                                Bind any setting to a dynamic data source (e.g. <code>model.attribute:title</code>, <code>page.title</code>).
+                            </div>
+
+                            @foreach(array_keys($activeElement['settings'] ?? []) as $settingKey)
+                                @php
+                                    $safeSettingKey = preg_replace('/[^a-zA-Z0-9_]/', '', (string) $settingKey) ?? '';
+                                    if ($safeSettingKey === '') { continue; }
+                                    $currentBinding = $dynamicData[$safeSettingKey] ?? '';
+                                @endphp
+                                <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+                                    <span style="font-size: 11px; color: #475569; min-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ $safeSettingKey }}">
+                                        {{ $safeSettingKey }}
+                                    </span>
+                                    <input
+                                        type="text"
+                                        value="{{ $currentBinding }}"
+                                        wire:change="updateDynamicBinding('{{ $safeSettingKey }}', $event.target.value)"
+                                        placeholder="dynamic tag..."
+                                        style="flex: 1; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 11px; font-family: monospace;"
+                                    />
+                                    @if($currentBinding !== '')
+                                        <button
+                                            type="button"
+                                            wire:click="clearDynamicBinding('{{ $safeSettingKey }}')"
+                                            style="padding: 3px 6px; font-size: 10px; border: 1px solid #fecaca; background: #fef2f2; color: #dc2626; border-radius: 4px; cursor: pointer;"
+                                        >×</button>
+                                    @endif
+                                </div>
+                            @endforeach
+
+                            <details style="margin-top: 8px;">
+                                <summary style="font-size: 11px; font-weight: 600; color: #475569; cursor: pointer;">Available Dynamic Tags</summary>
+                                <div style="margin-top: 6px;">
+                                    @foreach($availableDynamicTags as $tagName => $tagInfo)
+                                        <div style="font-size: 10px; color: #64748b; padding: 2px 0;">
+                                            <code style="color: #2563eb;">{{ $tagName }}</code>
+                                            <span>({{ $tagInfo['group'] }})</span>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </details>
+                        </div>
                     @else
                         <div style="text-align: center; padding: 32px 12px; color: #64748b; font-size: 13px;">
                             Select any element on the canvas to edit its Content, Style, and Advanced settings.

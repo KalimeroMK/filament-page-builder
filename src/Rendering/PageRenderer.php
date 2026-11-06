@@ -124,8 +124,10 @@ class PageRenderer
         $settings = array_merge($widget::getDefaultSettings(), $rawSettings);
 
         $dynamicMap = is_array($element['dynamic'] ?? null) ? $element['dynamic'] : [];
+        $elementContext = $this->resolveElementContext($dynamicMap, $context);
+
         if ($dynamicMap !== []) {
-            $settings = $this->dynamicTags->resolveElementSettings($settings, $dynamicMap, $context);
+            $settings = $this->dynamicTags->resolveElementSettings($settings, $dynamicMap, $elementContext);
         }
 
         $elementCss = $this->cssGenerator->generateForElement($id, $widget, $settings);
@@ -136,7 +138,7 @@ class PageRenderer
         if ($widget::isContainer() && ! empty($element['children']) && is_array($element['children'])) {
             foreach ($element['children'] as $child) {
                 if (is_array($child)) {
-                    $this->collectElementCss($child, $context, $cssChunks);
+                    $this->collectElementCss($child, $elementContext, $cssChunks);
                 }
             }
         }
@@ -163,11 +165,13 @@ class PageRenderer
         $settings = array_merge($widget::getDefaultSettings(), $rawSettings);
 
         $dynamicMap = is_array($element['dynamic'] ?? null) ? $element['dynamic'] : [];
+        $elementContext = $this->resolveElementContext($dynamicMap, $context);
+
         if ($dynamicMap !== []) {
-            $settings = $this->dynamicTags->resolveElementSettings($settings, $dynamicMap, $context);
+            $settings = $this->dynamicTags->resolveElementSettings($settings, $dynamicMap, $elementContext);
         }
 
-        event(new BeforeElementRender($element, $settings, $context));
+        event(new BeforeElementRender($element, $settings, $elementContext));
 
         $id = filled($element['id'] ?? null) ? (string) $element['id'] : $id;
         $element['id'] = $id;
@@ -187,17 +191,56 @@ class PageRenderer
 
             foreach ($element['children'] as $child) {
                 if (is_array($child)) {
-                    $childParts[] = $this->renderElement($child, $context, $cssChunks);
+                    $childParts[] = $this->renderElement($child, $elementContext, $cssChunks);
                 }
             }
 
             $childrenHtml = implode("\n", array_filter($childParts));
         }
 
-        $html = $widget->render($element, $settings, $childrenHtml, $context);
+        $html = $widget->render($element, $settings, $childrenHtml, $elementContext);
 
-        event(new AfterElementRender($element, $settings, $html, $context));
+        event(new AfterElementRender($element, $settings, $html, $elementContext));
 
         return $html;
+    }
+
+    /**
+     * If `dynamic.model` is set on the element, resolve the current Eloquent record
+     * and make it available as `record`/`model` in the render context.
+     *
+     * @param  array<string, mixed>  $dynamicMap
+     * @param  array<string, mixed>  $context
+     * @return array<string, mixed>
+     */
+    protected function resolveElementContext(array $dynamicMap, array $context): array
+    {
+        if (! array_key_exists('model', $dynamicMap)) {
+            return $context;
+        }
+
+        $modelKey = $dynamicMap['model'];
+        if (! is_string($modelKey) || $modelKey === '') {
+            return $context;
+        }
+
+        $record = $context['record'] ?? $context['model'] ?? null;
+        if ($record instanceof \Illuminate\Database\Eloquent\Model) {
+            $resolved = $record->getAttribute($modelKey);
+        } else {
+            $page = $context['page'] ?? null;
+            $resolved = $page instanceof \Illuminate\Database\Eloquent\Model
+                ? $page->getAttribute($modelKey)
+                : null;
+        }
+
+        if ($resolved instanceof \Illuminate\Database\Eloquent\Model) {
+            $context['record'] = $resolved;
+            $context['model'] = $resolved;
+        } else {
+            unset($context['record'], $context['model']);
+        }
+
+        return $context;
     }
 }

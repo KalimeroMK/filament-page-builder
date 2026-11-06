@@ -65,6 +65,30 @@ class SchemaTreeManipulator
     }
 
     /**
+     * Update the dynamic tag bindings map for a specific element ID in the tree.
+     *
+     * @param  array<int, array<string, mixed>>  $elements
+     * @param  array<string, mixed>  $newDynamic
+     * @return array<int, array<string, mixed>>
+     */
+    public static function updateElementDynamic(array $elements, string $id, array $newDynamic): array
+    {
+        foreach ($elements as $index => $element) {
+            if (($element['id'] ?? null) === $id) {
+                $elements[$index]['dynamic'] = $newDynamic;
+
+                return $elements;
+            }
+
+            if (! empty($element['children']) && is_array($element['children'])) {
+                $elements[$index]['children'] = static::updateElementDynamic($element['children'], $id, $newDynamic);
+            }
+        }
+
+        return $elements;
+    }
+
+    /**
      * Add a new element to the root list or inside a target container ID.
      *
      * @param  array<int, array<string, mixed>>  $elements
@@ -249,10 +273,13 @@ class SchemaTreeManipulator
     protected static function applyIdOrder(array $siblings, array $orderedIds): array
     {
         $byId = [];
+        $unkeyed = [];
         foreach ($siblings as $item) {
             $itemId = (string) ($item['id'] ?? '');
             if ($itemId !== '') {
                 $byId[$itemId] = $item;
+            } else {
+                $unkeyed[] = $item;
             }
         }
 
@@ -265,9 +292,13 @@ class SchemaTreeManipulator
             }
         }
 
-        // Preserve any remaining items not included in $orderedIds
+        // Preserve any remaining items not included in $orderedIds, and unkeyed elements
         foreach ($byId as $remaining) {
             $reordered[] = $remaining;
+        }
+
+        foreach ($unkeyed as $item) {
+            $reordered[] = $item;
         }
 
         return array_values($reordered);

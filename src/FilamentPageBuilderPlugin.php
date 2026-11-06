@@ -106,6 +106,7 @@ class FilamentPageBuilderPlugin implements Plugin
         $panel->pages([
             SiteSettingsPage::class,
             \KalimeroMK\FilamentPageBuilder\Filament\Pages\SiteKitPage::class,
+            \KalimeroMK\FilamentPageBuilder\Filament\Pages\MaintenanceSettingsPage::class,
         ]);
 
         $panel->resources([

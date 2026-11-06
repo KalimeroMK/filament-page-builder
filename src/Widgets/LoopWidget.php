@@ -54,6 +54,7 @@ class LoopWidget extends AbstractWidget
             'gap' => 20,
             'pagination' => 'none',
             'page_size' => 6,
+            'ajax_filters' => [],
         ]);
     }
 
@@ -139,12 +140,15 @@ class LoopWidget extends AbstractWidget
                 ->default(20),
             Select::make('pagination')
                 ->label('Pagination')
-                ->options(['none' => 'None', 'load_more' => 'Load More (AJAX)'])
+                ->options(['none' => 'None', 'load_more' => 'Load More (AJAX)', 'page_numbers' => 'Page Numbers (AJAX)'])
                 ->default('none'),
             TextInput::make('page_size')
                 ->label('Items Per Page')
                 ->numeric()
                 ->default(6),
+            TextInput::make('ajax_filters')
+                ->label('AJAX Filter Fields (comma separated, e.g. status,category_id)')
+                ->helperText('Expose these fields as frontend AJAX filters. Leave empty to disable filters.'),
         ];
     }
 
@@ -181,6 +185,10 @@ class LoopWidget extends AbstractWidget
         $settings['rendered_loop_items'] = $itemsData['items'];
         $settings['loop_items_css'] = $itemsData['css'];
         $settings['loop_has_more'] = $itemsData['has_more'];
+
+        $pageSize = max(1, min(100, (int) ($settings['page_size'] ?? $settings['limit'] ?? 6)));
+        $total = app(\KalimeroMK\FilamentPageBuilder\Services\LoopQueryBuilder::class)->total($settings);
+        $settings['loop_total_pages'] = $total > 0 ? (int) ceil($total / $pageSize) : 0;
 
         return parent::render($element, $settings, $childrenHtml, $context);
     }

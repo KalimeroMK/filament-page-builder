@@ -2,6 +2,13 @@
 
 All notable changes to `kalimeromk/filament-page-builder` are documented here.
 
+## v1.3.1 — 2026-11-06
+
+- **Coming Soon template**: `MaintenanceSettingsPage` (enable, message, optional `PageTemplate`, `retry_after_minutes`) and 503 rendering with generated CSS + `Retry-After` header.
+- **Loop AJAX filters**: validated exposed `ajax_filters` with **422** on unexposed/invalid fields (fail closed).
+- **Page Numbers pagination** (`page_numbers`) with `total` / `total_pages` metadata, deterministic secondary ordering, and a single deduplicated AJAX style tag.
+- **Maintenance path hardening**: only configured panel path, preview prefix, and Livewire are allowed during maintenance.
+
 ## v1.3.0 — 2026-11-06
 
 - **Full Site Kit import/export** (`SiteKitService` + `SiteKitPage`): pages, theme templates, templates, popups, menus, and settings in one JSON payload, imported atomically as drafts with fresh element IDs, unique slugs, and source→new `template_id` / `global_id` remapping.

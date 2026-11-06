@@ -79,6 +79,11 @@ class LoopQueryBuilder
         $orderDirection = strtolower((string) ($settings['order_direction'] ?? 'desc')) === 'asc' ? 'asc' : 'desc';
         $query->orderBy($orderBy, $orderDirection);
 
+        // Deterministic secondary ordering for stable pagination when order column is not unique
+        if ($orderBy !== $defaultKey) {
+            $query->orderBy($defaultKey, $orderDirection);
+        }
+
         return $query;
     }
 
@@ -90,14 +95,40 @@ class LoopQueryBuilder
             return new Collection();
         }
 
-        $pageSize = max(1, min(100, (int) ($settings['page_size'] ?? $settings['limit'] ?? 6)));
+        $pageSize = $this->effectivePageSize($settings);
         $page = max(1, (int) ($settings['page'] ?? 1));
-        $totalCap = max(1, min(500, (int) ($settings['limit'] ?? 100)));
 
         return $query
             ->offset(($page - 1) * $pageSize)
-            ->limit(min($pageSize, $totalCap))
+            ->limit($pageSize)
             ->get();
+    }
+
+    /**
+     * Effective page size used consistently for fetching, offsets, hasMore and total_pages.
+     *
+     * @param  array<string, mixed>  $settings
+     */
+    public function effectivePageSize(array $settings): int
+    {
+        $pageSize = max(1, min(100, (int) ($settings['page_size'] ?? $settings['limit'] ?? 6)));
+        $totalCap = max(1, min(500, (int) ($settings['limit'] ?? 100)));
+
+        return min($pageSize, $totalCap);
+    }
+
+    /**
+     * Total number of records matching the current loop settings (before pagination).
+     *
+     * @param  array<string, mixed>  $settings
+     */
+    public function total(array $settings): int
+    {
+        try {
+            return $this->buildQuery($settings)->count();
+        } catch (\InvalidArgumentException) {
+            return 0;
+        }
     }
 
     /**
@@ -113,13 +144,11 @@ class LoopQueryBuilder
             return false;
         }
 
-        $pageSize = max(1, min(100, (int) ($settings['page_size'] ?? $settings['limit'] ?? 6)));
+        $pageSize = $this->effectivePageSize($settings);
         $page = max(1, (int) ($settings['page'] ?? 1));
-        $totalCap = max(1, min(500, (int) ($settings['limit'] ?? 100)));
-        $effectiveSize = min($pageSize, $totalCap);
 
         return $query
-            ->offset($page * $effectiveSize)
+            ->offset($page * $pageSize)
             ->limit(1)
             ->exists();
     }

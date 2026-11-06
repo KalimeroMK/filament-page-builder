@@ -51,7 +51,7 @@ it('processes form submissions with validation, optional database persistence, a
 
     // Invalid submission (missing email)
     $this->post("/_builder/form/{$page->id}/form_1", ['name' => 'Зоран'])
-        ->assertSessionHasErrors(['email']);
+        ->assertSessionHasErrors(['email'], null, 'fpb_form_1');
 
     expect(FormSubmission::count())->toBe(0);
 
@@ -96,7 +96,7 @@ it('returns error response when a form action fails', function (): void {
     $this->post("/_builder/form/{$page->id}/form_1", [
         'name' => 'Ана',
         'email' => 'ana@example.com',
-    ])->assertSessionHasErrors(['fpb_form']);
+    ])->assertSessionHasErrors(['fpb_form'], null, 'fpb_form_1');
 
     $jsonPage = createFormPage([
         ['action' => 'email', 'settings' => ['to' => 'invalid']],
@@ -123,7 +123,7 @@ it('validates select options, numeric boundaries, and required checkboxes', func
         'color' => 'Purple',
         'quantity' => 5,
         'terms' => 1,
-    ])->assertSessionHasErrors(['color']);
+    ])->assertSessionHasErrors(['color'], null, 'fpb_form_1');
 
     // Numeric > 255 is allowed (no artificial max)
     $this->post("/_builder/form/{$page->id}/form_1", [
@@ -137,7 +137,7 @@ it('validates select options, numeric boundaries, and required checkboxes', func
         'color' => 'Blue',
         'quantity' => 5,
         'terms' => 0,
-    ])->assertSessionHasErrors(['terms']);
+    ])->assertSessionHasErrors(['terms'], null, 'fpb_form_1');
 });
 
 it('blocks SSRF via webhook to private hosts and allows public HTTPS webhooks', function (): void {
@@ -150,7 +150,7 @@ it('blocks SSRF via webhook to private hosts and allows public HTTPS webhooks', 
     $this->post("/_builder/form/{$privatePage->id}/form_1", [
         'name' => 'Ана',
         'email' => 'ana@example.com',
-    ])->assertSessionHasErrors(['fpb_form']);
+    ])->assertSessionHasErrors(['fpb_form'], null, 'fpb_form_1');
 
     Http::assertNothingSent();
 

@@ -41,6 +41,7 @@ class FilamentPageBuilderServiceProvider extends PackageServiceProvider
                 'create_fpb_templates_table',
                 'create_fpb_theme_templates_table',
                 'create_fpb_form_submissions_table',
+                'create_fpb_popups_table',
             ]);
     }
 
@@ -53,6 +54,7 @@ class FilamentPageBuilderServiceProvider extends PackageServiceProvider
         $this->app->singleton(PageCacheService::class, fn () => new PageCacheService());
         $this->app->singleton(ThemeConditionMatcher::class, fn () => new ThemeConditionMatcher());
         $this->app->singleton(\KalimeroMK\FilamentPageBuilder\Registries\FormActionRegistry::class, fn () => new \KalimeroMK\FilamentPageBuilder\Registries\FormActionRegistry());
+        $this->app->singleton(\KalimeroMK\FilamentPageBuilder\Services\PopupResolver::class, fn () => new \KalimeroMK\FilamentPageBuilder\Services\PopupResolver($this->app->make(ThemeConditionMatcher::class)));
 
         $this->app->singleton(PageRenderer::class, function ($app) {
             return new PageRenderer(

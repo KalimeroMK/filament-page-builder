@@ -34,5 +34,9 @@ if (config('filament-page-builder.routing.enabled', true)) {
         Route::post('/_builder/form/{page}/{elementId}', [\KalimeroMK\FilamentPageBuilder\Http\Controllers\FormController::class, 'submit'])
             ->middleware('throttle:' . $throttle)
             ->name('filament-page-builder.form.submit');
+
+        Route::post('/_builder/popup-form/{popup}/{elementId}', [\KalimeroMK\FilamentPageBuilder\Http\Controllers\FormController::class, 'submitPopup'])
+            ->middleware('throttle:' . $throttle)
+            ->name('filament-page-builder.popup-form.submit');
     });
 }

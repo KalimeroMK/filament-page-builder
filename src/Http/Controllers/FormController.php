@@ -8,12 +8,14 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use KalimeroMK\FilamentPageBuilder\Models\FormSubmission;
 use KalimeroMK\FilamentPageBuilder\Models\Page;
+use KalimeroMK\FilamentPageBuilder\Models\Popup;
 use KalimeroMK\FilamentPageBuilder\Registries\FormActionRegistry;
 use KalimeroMK\FilamentPageBuilder\Support\SchemaTreeManipulator;
 
@@ -27,7 +29,33 @@ class FormController extends Controller
         /** @var Page $pageRecord */
         $pageRecord = $pageModel::query()->published()->findOrFail($page);
 
-        $schema = $pageRecord->getPublishedSchema();
+        return $this->processSubmission($request, $pageRecord, $pageRecord->getPublishedSchema(), $elementId, $actions);
+    }
+
+    public function submitPopup(Request $request, int | string $popup, string $elementId, FormActionRegistry $actions): RedirectResponse | JsonResponse
+    {
+        /** @var class-string<Popup> $popupModel */
+        $popupModel = config('filament-page-builder.models.popup', Popup::class);
+
+        /** @var Popup $popupRecord */
+        $popupRecord = $popupModel::query()->published()->findOrFail($popup);
+
+        /** @var Page|null $hostPage */
+        $hostPage = null;
+        if ($request->filled('_host_page')) {
+            $pageModel = config('filament-page-builder.models.page', Page::class);
+            $hostPage = $pageModel::query()->published()->find($request->input('_host_page'));
+        }
+
+        return $this->processSubmission($request, $hostPage ?? $popupRecord, $popupRecord->getPublishedSchema(), $elementId, $actions);
+    }
+
+    /**
+     * @param  Page|Popup  $owner
+     * @param  array{version: int, elements: array<int, array<string, mixed>>}  $schema
+     */
+    protected function processSubmission(Request $request, Page | Popup $owner, array $schema, string $elementId, FormActionRegistry $actions): RedirectResponse | JsonResponse
+    {
         $element = SchemaTreeManipulator::findElement($schema['elements'], $elementId);
 
         if ($element === null || ($element['type'] ?? '') !== 'form') {
@@ -35,14 +63,17 @@ class FormController extends Controller
         }
 
         $settings = is_array($element['settings'] ?? null) ? $element['settings'] : [];
+        $errorBag = 'fpb_' . $elementId;
 
         // Honeypot anti-spam: if the hidden field is filled, silently succeed without storing
         if (! empty($settings['honeypot']) && $request->filled('_hp')) {
-            return $this->respondSuccess($request, $pageRecord, $elementId, (string) ($settings['success_message'] ?? 'Thank you!'), null);
+            return $this->respondSuccess($request, $owner, $elementId, (string) ($settings['success_message'] ?? 'Thank you!'), null);
         }
 
-        $rules = [];
+        $this->verifyTurnstileIfEnabled($request, $settings, $errorBag);
+
         $fields = is_array($settings['fields'] ?? null) ? $settings['fields'] : [];
+        $rules = [];
 
         foreach ($fields as $field) {
             if (! is_array($field)) {
@@ -51,6 +82,10 @@ class FormController extends Controller
 
             $name = (string) ($field['name'] ?? '');
             if ($name === '' || ! preg_match('/^[a-zA-Z0-9_]+$/', $name)) {
+                continue;
+            }
+
+            if (! $this->isFieldVisible($field, $request)) {
                 continue;
             }
 
@@ -86,7 +121,7 @@ class FormController extends Controller
         }
 
         $validator = Validator::make($request->all(), $rules);
-        $validated = $validator->validate();
+        $validated = $validator->validateWithBag($errorBag);
 
         $actionConfigs = is_array($settings['actions'] ?? null) ? $settings['actions'] : [];
         $shouldPersist = collect($actionConfigs)->contains(fn ($a): bool => is_array($a) && ($a['action'] ?? '') === 'save_to_database');
@@ -96,7 +131,7 @@ class FormController extends Controller
 
         /** @var FormSubmission $submission */
         $submission = new $submissionModel([
-            'page_id' => $pageRecord->getKey(),
+            'page_id' => $owner->getKey(),
             'element_id' => $elementId,
             'data' => $validated,
             'ip_address' => $request->ip(),
@@ -125,13 +160,13 @@ class FormController extends Controller
                     is_array($actionConfig['settings'] ?? null) ? $actionConfig['settings'] : [],
                     $validated,
                     $submission,
-                    $pageRecord,
-                    ['request' => $request],
+                    $this->resolveActionPage($owner),
+                    ['request' => $request, 'owner' => $owner],
                 );
             } catch (\Throwable $e) {
                 Log::error('Form action failed', [
                     'action' => $actionName,
-                    'page_id' => $pageRecord->getKey(),
+                    'owner_id' => $owner->getKey(),
                     'error' => $e->getMessage(),
                 ]);
 
@@ -165,16 +200,34 @@ class FormController extends Controller
 
             throw ValidationException::withMessages([
                 'fpb_form' => ['Some actions failed to complete: ' . implode('; ', $failures)],
-            ]);
+            ])->errorBag($errorBag);
         }
 
         return $this->respondSuccess(
             $request,
-            $pageRecord,
+            $owner,
             $elementId,
             (string) ($settings['success_message'] ?? 'Thank you! Your submission has been received.'),
             $redirectUrl,
         );
+    }
+
+    /**
+     * Build a Page instance suitable for form actions from the owning Page or Popup.
+     */
+    protected function resolveActionPage(Page | Popup $owner): Page
+    {
+        if ($owner instanceof Page) {
+            return $owner;
+        }
+
+        $page = new Page();
+        $page->title = $owner->title;
+        $page->slug = 'popup-' . $owner->getKey();
+        $page->exists = true;
+        $page->setAttribute($page->getKeyName(), $owner->getKey());
+
+        return $page;
     }
 
     /**
@@ -185,7 +238,67 @@ class FormController extends Controller
         return array_values(array_filter(array_map('trim', explode(',', $options)), fn (string $o): bool => $o !== ''));
     }
 
-    protected function respondSuccess(Request $request, Page $page, string $elementId, string $message, ?string $redirectUrl): RedirectResponse | JsonResponse
+    /**
+     * @param  array<string, mixed>  $field
+     */
+    protected function isFieldVisible(array $field, Request $request): bool
+    {
+        $visibleIfField = trim((string) ($field['visible_if_field'] ?? ''));
+        if ($visibleIfField === '') {
+            return true;
+        }
+
+        $expected = (string) ($field['visible_if_value'] ?? '');
+        $actual = $request->input($visibleIfField);
+
+        if (! is_scalar($actual) && $actual !== null) {
+            return false;
+        }
+
+        return (string) $actual === $expected;
+    }
+
+    /**
+     * @param  array<string, mixed>  $settings
+     */
+    protected function verifyTurnstileIfEnabled(Request $request, array $settings, string $errorBag): void
+    {
+        if (empty($settings['turnstile'])) {
+            return;
+        }
+
+        $secret = (string) config('filament-page-builder.forms.turnstile.secret_key', '');
+        $siteKey = (string) config('filament-page-builder.forms.turnstile.site_key', '');
+
+        if ($secret === '' || $siteKey === '') {
+            throw ValidationException::withMessages([
+                'cf-turnstile-response' => ['Turnstile is enabled but not fully configured (missing site or secret key).'],
+            ])->errorBag($errorBag);
+        }
+
+        $token = (string) $request->input('cf-turnstile-response', '');
+
+        try {
+            $response = Http::asForm()->timeout(10)->post(
+                'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+                ['secret' => $secret, 'response' => $token, 'remoteip' => $request->ip()],
+            );
+        } catch (\Throwable $e) {
+            Log::error('Turnstile verification request failed', ['error' => $e->getMessage()]);
+
+            throw ValidationException::withMessages([
+                'cf-turnstile-response' => ['Turnstile verification is temporarily unavailable. Please try again.'],
+            ])->errorBag($errorBag);
+        }
+
+        if (! $response->json('success')) {
+            throw ValidationException::withMessages([
+                'cf-turnstile-response' => ['Turnstile verification failed. Please try again.'],
+            ])->errorBag($errorBag);
+        }
+    }
+
+    protected function respondSuccess(Request $request, Page | Popup $owner, string $elementId, string $message, ?string $redirectUrl): RedirectResponse | JsonResponse
     {
         if ($request->expectsJson()) {
             return response()->json([
@@ -195,7 +308,13 @@ class FormController extends Controller
             ]);
         }
 
-        $target = $redirectUrl ?? $page->getPublicUrl();
+        if ($redirectUrl !== null) {
+            $target = $redirectUrl;
+        } elseif ($owner instanceof Page) {
+            $target = $owner->getPublicUrl();
+        } else {
+            $target = $request->headers->get('referer') ?: '/';
+        }
 
         return redirect()
             ->to($target)

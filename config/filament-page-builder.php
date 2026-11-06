@@ -34,6 +34,7 @@ return [
         'template' => PageTemplate::class,
         'theme_template' => \KalimeroMK\FilamentPageBuilder\Models\ThemeTemplate::class,
         'form_submission' => \KalimeroMK\FilamentPageBuilder\Models\FormSubmission::class,
+        'popup' => \KalimeroMK\FilamentPageBuilder\Models\Popup::class,
     ],
 
     /*
@@ -47,6 +48,7 @@ return [
         'templates' => 'fpb_templates',
         'theme_templates' => 'fpb_theme_templates',
         'form_submissions' => 'fpb_form_submissions',
+        'popups' => 'fpb_popups',
     ],
 
     /*
@@ -125,6 +127,10 @@ return [
         'rate_limit' => '10,1',
         'webhook_allowed_hosts' => [],
         'allow_external_redirects' => false,
+        'turnstile' => [
+            'site_key' => env('FPB_TURNSTILE_SITE_KEY', ''),
+            'secret_key' => env('FPB_TURNSTILE_SECRET_KEY', ''),
+        ],
     ],
 
     /*

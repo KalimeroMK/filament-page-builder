@@ -92,6 +92,16 @@ class FormWidget extends AbstractWidget
                     TextInput::make('options')
                         ->label('Select Options (comma separated, for select only)')
                         ->placeholder('Option A, Option B'),
+                    Grid::make(3)->schema([
+                        TextInput::make('step')
+                            ->label('Step # (multi-step)')
+                            ->numeric()
+                            ->default(1),
+                        TextInput::make('visible_if_field')
+                            ->label('Show only if field...'),
+                        TextInput::make('visible_if_value')
+                            ->label('...equals value'),
+                    ]),
                 ]),
             Repeater::make('actions')
                 ->label('Actions After Submit')
@@ -118,6 +128,9 @@ class FormWidget extends AbstractWidget
             Toggle::make('honeypot')
                 ->label('Enable Honeypot Anti-Spam')
                 ->default(true),
+            Toggle::make('turnstile')
+                ->label('Enable Cloudflare Turnstile (requires keys in config)')
+                ->default(false),
         ];
     }
 
@@ -134,9 +147,18 @@ class FormWidget extends AbstractWidget
     public function render(array $element, array $settings, string $childrenHtml = '', array $context = []): string
     {
         $page = $context['page'] ?? null;
-        $settings['form_action_url'] = $page !== null
-            ? route('filament-page-builder.form.submit', ['page' => $page->getKey(), 'elementId' => $element['id'] ?? ''])
-            : '#';
+        $popup = $context['popup'] ?? null;
+
+        if ($popup !== null) {
+            $settings['form_action_url'] = route('filament-page-builder.popup-form.submit', [
+                'popup' => $popup->getKey(),
+                'elementId' => $element['id'] ?? '',
+            ]);
+        } else {
+            $settings['form_action_url'] = $page !== null
+                ? route('filament-page-builder.form.submit', ['page' => $page->getKey(), 'elementId' => $element['id'] ?? ''])
+                : '#';
+        }
 
         return parent::render($element, $settings, $childrenHtml, $context);
     }

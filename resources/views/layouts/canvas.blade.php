@@ -27,5 +27,6 @@
     <main id="fpb-viewport-frame" class="fpb-layout-canvas">
         @yield('fpb-content')
     </main>
+    @include('filament-page-builder::components.popups', ['page' => $page, 'isPreview' => $isPreview ?? false])
 </body>
 </html>

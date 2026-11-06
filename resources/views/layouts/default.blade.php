@@ -36,5 +36,6 @@
         </main>
         @filamentThemeRegion('footer', ['page' => $page])
     </div>
+    @include('filament-page-builder::components.popups', ['page' => $page, 'isPreview' => $isPreview ?? false])
 </body>
 </html>

@@ -10,9 +10,14 @@ use Filament\Schemas\Concerns\RestrictsFileUploadsToSchemaComponents;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Schemas\Schema;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use KalimeroMK\FilamentPageBuilder\Models\Page;
+use KalimeroMK\FilamentPageBuilder\Models\PageRevision;
+use KalimeroMK\FilamentPageBuilder\Models\PageTemplate;
+use KalimeroMK\FilamentPageBuilder\Registries\TemplateRegistry;
 use KalimeroMK\FilamentPageBuilder\Registries\WidgetRegistry;
 use KalimeroMK\FilamentPageBuilder\Rendering\CssGenerator;
 use KalimeroMK\FilamentPageBuilder\Rendering\PageRenderer;
@@ -25,6 +30,8 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
 {
     use InteractsWithSchemas;
     use RestrictsFileUploadsToSchemaComponents;
+
+    protected const MAX_HISTORY_STEPS = 30;
 
     #[Locked]
     public int | string $pageId;
@@ -39,12 +46,38 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
         'elements' => [],
     ];
 
+    /**
+     * Undo history stack of `elements` snapshots.
+     *
+     * @var array<int, array<int, array<string, mixed>>>
+     */
+    #[Locked]
+    public array $historyStack = [];
+
+    /**
+     * Redo stack of `elements` snapshots.
+     *
+     * @var array<int, array<int, array<string, mixed>>>
+     */
+    #[Locked]
+    public array $redoStack = [];
+
+    /**
+     * Copied element in clipboard for Copy/Paste.
+     *
+     * @var array<string, mixed>|null
+     */
+    #[Locked]
+    public ?array $clipboardElement = null;
+
+    #[Locked]
     public ?string $activeElementId = null;
 
+    #[Locked]
     public ?string $targetContainerId = null;
 
     /**
-     * Active left sidebar tab: 'widgets' | 'inspector' | 'page_settings'.
+     * Active left sidebar tab: 'widgets' | 'inspector' | 'templates' | 'revisions' | 'page_settings'.
      */
     public string $leftTab = 'widgets';
 
@@ -67,6 +100,13 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
      */
     public array $pageSettingsData = [];
 
+    public string $newTemplateName = '';
+
+    public string $newTemplateCategory = 'section';
+
+    public string $importJsonPayload = '';
+
+    #[Locked]
     public bool $hasUnsavedEditorChanges = false;
 
     public function mount(Page | int | string $page): void
@@ -117,6 +157,333 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
         $model = config('filament-page-builder.models.page', Page::class);
 
         return $model;
+    }
+
+    /**
+     * @return class-string<PageTemplate>
+     */
+    protected function resolveTemplateModel(): string
+    {
+        /** @var class-string<PageTemplate> $model */
+        $model = config('filament-page-builder.models.template', PageTemplate::class);
+
+        return $model;
+    }
+
+    /**
+     * Commit a new elements array into `$this->schema['elements']` only if it actually changed,
+     * pushing the previous state onto `$this->historyStack`.
+     *
+     * @param  array<int, array<string, mixed>>  $newElements
+     */
+    protected function applyElementsMutation(array $newElements): bool
+    {
+        $normalizedNew = Page::normalizeSchema(['version' => 1, 'elements' => $newElements])['elements'];
+
+        if ($normalizedNew === $this->schema['elements']) {
+            return false;
+        }
+
+        $this->historyStack[] = $this->schema['elements'];
+
+        if (count($this->historyStack) > self::MAX_HISTORY_STEPS) {
+            array_shift($this->historyStack);
+        }
+
+        $this->redoStack = [];
+        $this->schema['elements'] = $normalizedNew;
+        $this->hasUnsavedEditorChanges = true;
+
+        return true;
+    }
+
+    public function canUndo(): bool
+    {
+        return $this->historyStack !== [];
+    }
+
+    public function canRedo(): bool
+    {
+        return $this->redoStack !== [];
+    }
+
+    public function undo(): void
+    {
+        if (! $this->canUndo()) {
+            return;
+        }
+
+        $previousElements = array_pop($this->historyStack);
+        $this->redoStack[] = $this->schema['elements'];
+        $this->schema['elements'] = Page::normalizeSchema([
+            'version' => 1,
+            'elements' => is_array($previousElements) ? $previousElements : [],
+        ])['elements'];
+        $this->hasUnsavedEditorChanges = true;
+        $this->syncSelectionAfterTreeChange();
+    }
+
+    public function redo(): void
+    {
+        if (! $this->canRedo()) {
+            return;
+        }
+
+        $nextElements = array_pop($this->redoStack);
+        $this->historyStack[] = $this->schema['elements'];
+        $this->schema['elements'] = Page::normalizeSchema([
+            'version' => 1,
+            'elements' => is_array($nextElements) ? $nextElements : [],
+        ])['elements'];
+        $this->hasUnsavedEditorChanges = true;
+        $this->syncSelectionAfterTreeChange();
+    }
+
+    protected function syncSelectionAfterTreeChange(): void
+    {
+        if ($this->activeElementId !== null) {
+            $el = SchemaTreeManipulator::findElement($this->schema['elements'], $this->activeElementId);
+            if ($el === null) {
+                $this->activeElementId = null;
+                $this->inspectorData = [];
+                $this->clearCachedInspectorSchema();
+            } else {
+                $widget = app(WidgetRegistry::class)->get((string) ($el['type'] ?? ''));
+                $defaults = $widget !== null ? $widget::getDefaultSettings() : [];
+                $this->inspectorData = array_merge($defaults, is_array($el['settings'] ?? null) ? $el['settings'] : []);
+                $this->clearCachedInspectorSchema();
+            }
+        }
+
+        if (
+            $this->targetContainerId !== null &&
+            SchemaTreeManipulator::findElement($this->schema['elements'], $this->targetContainerId) === null
+        ) {
+            $this->targetContainerId = null;
+        }
+    }
+
+    /**
+     * Copy an element into the editor clipboard.
+     */
+    public function copyElement(string $elementId): void
+    {
+        $element = SchemaTreeManipulator::findElement($this->schema['elements'], $elementId);
+
+        if ($element === null) {
+            return;
+        }
+
+        $this->clipboardElement = $element;
+
+        Notification::make()
+            ->title('Element copied to clipboard')
+            ->info()
+            ->send();
+    }
+
+    /**
+     * Paste the copied element into `$parentContainerId`, `$targetContainerId`, or root.
+     */
+    public function pasteElement(?string $parentContainerId = null): ?string
+    {
+        if ($this->clipboardElement === null) {
+            return null;
+        }
+
+        $cloned = SchemaTreeManipulator::cloneWithFreshIds($this->clipboardElement);
+        $newId = (string) $cloned['id'];
+
+        $containerId = $parentContainerId ?? $this->targetContainerId;
+        if ($containerId !== null) {
+            $parentEl = SchemaTreeManipulator::findElement($this->schema['elements'], $containerId);
+            $parentWidget = $parentEl !== null ? app(WidgetRegistry::class)->get((string) ($parentEl['type'] ?? '')) : null;
+
+            if ($parentWidget === null || ! $parentWidget::isContainer()) {
+                $containerId = null;
+            }
+        }
+
+        $updated = SchemaTreeManipulator::addElement(
+            $this->schema['elements'],
+            $cloned,
+            $containerId,
+        );
+
+        $this->applyElementsMutation($updated);
+        $this->selectElement($newId);
+
+        return $newId;
+    }
+
+    /**
+     * Save either the whole page schema or only the currently selected element as a reusable PageTemplate.
+     */
+    public function saveAsTemplate(bool $onlyActiveElement = false): ?int
+    {
+        $this->authorizePageAccess($this->page);
+
+        $this->validate([
+            'newTemplateName' => ['required', 'string', 'max:255'],
+            'newTemplateCategory' => ['required', 'string', 'max:64'],
+        ]);
+
+        if ($onlyActiveElement) {
+            if ($this->activeElementId === null) {
+                return null;
+            }
+
+            $activeEl = SchemaTreeManipulator::findElement($this->schema['elements'], $this->activeElementId);
+            if ($activeEl === null) {
+                return null;
+            }
+
+            $elementsToSave = [$activeEl];
+        } else {
+            $elementsToSave = $this->schema['elements'];
+        }
+
+        $templateModel = $this->resolveTemplateModel();
+
+        /** @var PageTemplate $template */
+        $template = $templateModel::create([
+            'name' => trim($this->newTemplateName),
+            'category' => trim($this->newTemplateCategory) ?: 'section',
+            'schema' => [
+                'version' => 1,
+                'elements' => $elementsToSave,
+            ],
+            'created_by' => Auth::check() ? (int) Auth::id() : null,
+        ]);
+
+        $this->newTemplateName = '';
+
+        Notification::make()
+            ->title('Template saved to library!')
+            ->success()
+            ->send();
+
+        return (int) $template->getKey();
+    }
+
+    /**
+     * Insert or replace the canvas with a saved database PageTemplate.
+     */
+    public function applyDatabaseTemplate(int $templateId, bool $append = true): void
+    {
+        $this->authorizePageAccess($this->page);
+
+        $templateModel = $this->resolveTemplateModel();
+
+        /** @var PageTemplate $template */
+        $template = $templateModel::query()->findOrFail($templateId);
+
+        $this->applyNormalizedTemplateSchema(
+            Page::normalizeSchema(is_array($template->schema) ? $template->schema : []),
+            $append,
+        );
+    }
+
+    /**
+     * Insert or replace the canvas with a code-registered template from TemplateRegistry.
+     */
+    public function applyRegisteredTemplate(string $templateKey, bool $append = true): void
+    {
+        $this->authorizePageAccess($this->page);
+
+        $template = app(TemplateRegistry::class)->get($templateKey);
+        if ($template === null) {
+            return;
+        }
+
+        $this->applyNormalizedTemplateSchema(
+            Page::normalizeSchema($template['schema']),
+            $append,
+        );
+    }
+
+    /**
+     * @param  array{version: int, elements: array<int, array<string, mixed>>}  $templateSchema
+     */
+    protected function applyNormalizedTemplateSchema(array $templateSchema, bool $append): void
+    {
+        $freshElements = array_values(array_map(
+            fn (array $el): array => SchemaTreeManipulator::cloneWithFreshIds($el),
+            $templateSchema['elements'],
+        ));
+
+        $nextElements = $append
+            ? array_values(array_merge($this->schema['elements'], $freshElements))
+            : $freshElements;
+
+        $this->applyElementsMutation($nextElements);
+        $this->syncSelectionAfterTreeChange();
+    }
+
+    /**
+     * Export the current working schema as a JSON string and populate the JSON box in the UI.
+     */
+    public function exportCurrentSchemaJson(): string
+    {
+        $this->authorizePageAccess($this->page);
+
+        $json = (string) json_encode($this->schema, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        $this->importJsonPayload = $json;
+
+        return $json;
+    }
+
+    /**
+     * Import a JSON schema payload into the visual editor (either replacing or appending).
+     */
+    public function importSchemaFromJson(?string $json = null, bool $append = false): void
+    {
+        $this->authorizePageAccess($this->page);
+
+        $payload = $json ?? $this->importJsonPayload;
+        $decoded = json_decode(trim($payload), true);
+
+        if (! is_array($decoded) || ! PageTemplate::isValidSchemaPayload($decoded)) {
+            $this->addError('importJsonPayload', 'Invalid JSON schema payload: must contain an elements array.');
+
+            return;
+        }
+
+        $rawSchema = is_array($decoded['schema'] ?? null) ? $decoded['schema'] : $decoded;
+        $normalized = Page::normalizeSchema($rawSchema);
+
+        $this->applyNormalizedTemplateSchema($normalized, $append);
+        $this->importJsonPayload = '';
+
+        Notification::make()
+            ->title('JSON schema imported into editor')
+            ->success()
+            ->send();
+    }
+
+    /**
+     * Restore a historical PageRevision into the visual editor and draft_content with Undo support.
+     */
+    public function restoreRevisionInEditor(int $revisionId): void
+    {
+        $page = $this->page;
+        $this->authorizePageAccess($page);
+
+        /** @var PageRevision $revision */
+        $revision = $page->revisions()->findOrFail($revisionId);
+
+        $restoredSchema = Page::normalizeSchema($revision->schema_snapshot);
+        $this->applyElementsMutation($restoredSchema['elements']);
+
+        $page->restoreRevision($revision);
+        $this->fillPageSettingsFromRecord($page);
+        $this->hasUnsavedEditorChanges = false;
+        $this->syncSelectionAfterTreeChange();
+
+        Notification::make()
+            ->title("Restored Revision #{$revision->version_number} into Draft")
+            ->info()
+            ->send();
     }
 
     /**
@@ -187,13 +554,13 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
             return;
         }
 
-        $this->schema['elements'] = SchemaTreeManipulator::updateElementSettings(
+        $updatedElements = SchemaTreeManipulator::updateElementSettings(
             $this->schema['elements'],
             $this->activeElementId,
             $this->inspectorData,
         );
 
-        $this->hasUnsavedEditorChanges = true;
+        $this->applyElementsMutation($updatedElements);
     }
 
     public function updatedPageSettingsData(): void
@@ -248,14 +615,14 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
             }
         }
 
-        $this->schema['elements'] = SchemaTreeManipulator::addElement(
+        $updatedElements = SchemaTreeManipulator::addElement(
             $this->schema['elements'],
             $newElement,
             $containerId,
             $position,
         );
 
-        $this->hasUnsavedEditorChanges = true;
+        $this->applyElementsMutation($updatedElements);
         $this->selectElement($newId);
 
         return $newId;
@@ -279,47 +646,35 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
 
     public function moveElementUp(string $elementId): void
     {
-        $this->schema['elements'] = SchemaTreeManipulator::moveElement($this->schema['elements'], $elementId, -1);
-        $this->hasUnsavedEditorChanges = true;
+        $updated = SchemaTreeManipulator::moveElement($this->schema['elements'], $elementId, -1);
+        $this->applyElementsMutation($updated);
     }
 
     public function moveElementDown(string $elementId): void
     {
-        $this->schema['elements'] = SchemaTreeManipulator::moveElement($this->schema['elements'], $elementId, 1);
-        $this->hasUnsavedEditorChanges = true;
+        $updated = SchemaTreeManipulator::moveElement($this->schema['elements'], $elementId, 1);
+        $this->applyElementsMutation($updated);
     }
 
     public function duplicateElement(string $elementId): void
     {
         $result = SchemaTreeManipulator::duplicateElement($this->schema['elements'], $elementId);
-        $this->schema['elements'] = $result['elements'];
-        $this->hasUnsavedEditorChanges = true;
 
-        if ($result['cloned_id'] !== null) {
+        if ($this->applyElementsMutation($result['elements']) && $result['cloned_id'] !== null) {
             $this->selectElement($result['cloned_id']);
         }
     }
 
     public function removeElement(string $elementId): void
     {
-        $this->schema['elements'] = SchemaTreeManipulator::removeElement($this->schema['elements'], $elementId);
-        $this->hasUnsavedEditorChanges = true;
+        $updated = SchemaTreeManipulator::removeElement($this->schema['elements'], $elementId);
 
-        if (
-            $this->activeElementId !== null &&
-            SchemaTreeManipulator::findElement($this->schema['elements'], $this->activeElementId) === null
-        ) {
-            $this->activeElementId = null;
-            $this->inspectorData = [];
-            $this->leftTab = 'widgets';
-            $this->clearCachedInspectorSchema();
-        }
+        if ($this->applyElementsMutation($updated)) {
+            $this->syncSelectionAfterTreeChange();
 
-        if (
-            $this->targetContainerId !== null &&
-            SchemaTreeManipulator::findElement($this->schema['elements'], $this->targetContainerId) === null
-        ) {
-            $this->targetContainerId = null;
+            if ($this->activeElementId === null) {
+                $this->leftTab = 'widgets';
+            }
         }
     }
 
@@ -330,13 +685,13 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
      */
     public function reorderElements(array $orderedIds, ?string $parentContainerId = null): void
     {
-        $this->schema['elements'] = SchemaTreeManipulator::reorderSiblings(
+        $updated = SchemaTreeManipulator::reorderSiblings(
             $this->schema['elements'],
             $parentContainerId,
             $orderedIds,
         );
 
-        $this->hasUnsavedEditorChanges = true;
+        $this->applyElementsMutation($updated);
     }
 
     public function setViewport(string $viewport): void
@@ -348,36 +703,42 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
 
     public function setLeftTab(string $tab): void
     {
-        if (in_array($tab, ['widgets', 'inspector', 'page_settings'], true)) {
+        if (in_array($tab, ['widgets', 'inspector', 'templates', 'revisions', 'page_settings'], true)) {
             $this->leftTab = $tab;
         }
     }
 
     /**
-     * Save current editor state into `draft_content` without modifying the live published page.
+     * Validate and persist the working editor state into `draft_content`.
      */
-    public function saveDraft(): void
+    protected function persistDraft(): Page
     {
         $page = $this->page;
         $this->authorizePageAccess($page);
 
         $allowedLayouts = array_keys((array) config('filament-page-builder.layouts', ['default' => 'default']));
 
-        $this->validate([
-            'pageSettingsData.title' => ['required', 'string', 'max:255'],
-            'pageSettingsData.slug' => [
-                'required',
-                'string',
-                'max:255',
-                'regex:/^[A-Za-z0-9\-_]+(?:\/[A-Za-z0-9\-_]+)*$/',
-                Rule::unique($page->getTable(), 'slug')->ignore($page->getKey()),
-            ],
-            'pageSettingsData.layout' => ['required', 'string', Rule::in($allowedLayouts)],
-            'pageSettingsData.meta_title' => ['nullable', 'string', 'max:255'],
-            'pageSettingsData.meta_description' => ['nullable', 'string', 'max:1000'],
-            'pageSettingsData.og_image' => ['nullable', 'string', 'max:2048'],
-            'pageSettingsData.noindex' => ['boolean'],
-        ]);
+        try {
+            $this->validate([
+                'pageSettingsData.title' => ['required', 'string', 'max:255'],
+                'pageSettingsData.slug' => [
+                    'required',
+                    'string',
+                    'max:255',
+                    'regex:/^[A-Za-z0-9\-_]+(?:\/[A-Za-z0-9\-_]+)*$/',
+                    Rule::unique($page->getTable(), 'slug')->ignore($page->getKey()),
+                ],
+                'pageSettingsData.layout' => ['required', 'string', Rule::in($allowedLayouts)],
+                'pageSettingsData.meta_title' => ['nullable', 'string', 'max:255'],
+                'pageSettingsData.meta_description' => ['nullable', 'string', 'max:1000'],
+                'pageSettingsData.og_image' => ['nullable', 'string', 'max:2048'],
+                'pageSettingsData.noindex' => ['boolean'],
+            ]);
+        } catch (ValidationException $e) {
+            $this->leftTab = 'page_settings';
+
+            throw $e;
+        }
 
         $page->title = trim((string) $this->pageSettingsData['title']);
         $page->slug = trim((string) $this->pageSettingsData['slug']);
@@ -396,6 +757,16 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
         $page->saveDraft($this->schema, $meta);
         $this->hasUnsavedEditorChanges = false;
 
+        return $page;
+    }
+
+    /**
+     * Save current editor state into `draft_content` without modifying the live published page.
+     */
+    public function saveDraft(): void
+    {
+        $this->persistDraft();
+
         Notification::make()
             ->title('Draft saved')
             ->body('Working changes saved to draft. Use Preview to inspect or Publish to push live.')
@@ -408,8 +779,8 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
      */
     public function publishPage(): void
     {
-        $this->saveDraft();
-        $this->page->publish();
+        $page = $this->persistDraft();
+        $page->publish();
         $this->hasUnsavedEditorChanges = false;
 
         Notification::make()
@@ -428,7 +799,8 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
         $this->authorizePageAccess($page);
 
         $page = $page->discardDraft();
-        $this->schema = $page->getWorkingSchema();
+        $restored = $page->getWorkingSchema();
+        $this->applyElementsMutation($restored['elements']);
         $this->fillPageSettingsFromRecord($page);
         $this->activeElementId = null;
         $this->targetContainerId = null;
@@ -448,9 +820,11 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
         $registry = app(WidgetRegistry::class);
         $renderer = app(PageRenderer::class);
         $cssGenerator = app(CssGenerator::class);
+        $templateRegistry = app(TemplateRegistry::class);
+        $templateModel = $this->resolveTemplateModel();
 
         $page = $this->page;
-        $renderedPreview = $renderer->renderSchema($this->schema, [
+        $generatedCss = $renderer->generateCssForSchema($this->schema, [
             'page' => $page,
             'is_preview' => true,
             'is_editor' => true,
@@ -463,8 +837,12 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
             'activeElement' => $this->activeElementId !== null
                 ? SchemaTreeManipulator::findElement($this->schema['elements'], $this->activeElementId)
                 : null,
-            'generatedCss' => $renderedPreview->css ?: $cssGenerator->baseStyles(),
+            'generatedCss' => $generatedCss ?: $cssGenerator->baseStyles(),
             'previewUrl' => $page->getPreviewUrl(),
+            'savedTemplates' => $templateModel::query()->latest()->get(),
+            'registeredTemplates' => $templateRegistry->all(),
+            'revisions' => $page->revisions()->limit(20)->get(),
+            'availableLayouts' => array_keys((array) config('filament-page-builder.layouts', ['default' => 'default'])),
         ]);
     }
 }

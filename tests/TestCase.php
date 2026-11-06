@@ -49,5 +49,8 @@ class TestCase extends Orchestra
 
         $createRevisions = include __DIR__ . '/../database/migrations/create_fpb_page_revisions_table.php.stub';
         $createRevisions->up();
+
+        $createTemplates = include __DIR__ . '/../database/migrations/create_fpb_templates_table.php.stub';
+        $createTemplates->up();
     }
 }

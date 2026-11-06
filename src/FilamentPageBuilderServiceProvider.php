@@ -36,6 +36,7 @@ class FilamentPageBuilderServiceProvider extends PackageServiceProvider
             ->hasMigrations([
                 'create_fpb_pages_table',
                 'create_fpb_page_revisions_table',
+                'create_fpb_templates_table',
             ]);
     }
 

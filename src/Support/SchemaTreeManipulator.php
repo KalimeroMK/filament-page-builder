@@ -277,15 +277,15 @@ class SchemaTreeManipulator
      * @param  array<string, mixed>  $element
      * @return array<string, mixed>
      */
-    protected static function cloneWithFreshIds(array $element): array
+    public static function cloneWithFreshIds(array $element): array
     {
         $element['id'] = static::generateElementId((string) ($element['type'] ?? 'el'));
 
         if (! empty($element['children']) && is_array($element['children'])) {
-            $element['children'] = array_map(
+            $element['children'] = array_values(array_map(
                 fn (array $child): array => static::cloneWithFreshIds($child),
                 array_filter($element['children'], 'is_array'),
-            );
+            ));
         }
 
         return $element;

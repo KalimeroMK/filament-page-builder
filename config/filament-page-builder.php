@@ -4,12 +4,19 @@ declare(strict_types=1);
 
 use KalimeroMK\FilamentPageBuilder\Models\Page;
 use KalimeroMK\FilamentPageBuilder\Models\PageRevision;
+use KalimeroMK\FilamentPageBuilder\Models\PageTemplate;
+use KalimeroMK\FilamentPageBuilder\Widgets\AccordionWidget;
+use KalimeroMK\FilamentPageBuilder\Widgets\AlertWidget;
 use KalimeroMK\FilamentPageBuilder\Widgets\ButtonWidget;
 use KalimeroMK\FilamentPageBuilder\Widgets\ContainerWidget;
 use KalimeroMK\FilamentPageBuilder\Widgets\HeadingWidget;
+use KalimeroMK\FilamentPageBuilder\Widgets\HtmlWidget;
 use KalimeroMK\FilamentPageBuilder\Widgets\IconWidget;
+use KalimeroMK\FilamentPageBuilder\Widgets\ImageGalleryWidget;
 use KalimeroMK\FilamentPageBuilder\Widgets\ImageWidget;
 use KalimeroMK\FilamentPageBuilder\Widgets\SpacerWidget;
+use KalimeroMK\FilamentPageBuilder\Widgets\TabsWidget;
+use KalimeroMK\FilamentPageBuilder\Widgets\TestimonialWidget;
 use KalimeroMK\FilamentPageBuilder\Widgets\TextWidget;
 use KalimeroMK\FilamentPageBuilder\Widgets\VideoWidget;
 
@@ -22,6 +29,7 @@ return [
     'models' => [
         'page' => Page::class,
         'page_revision' => PageRevision::class,
+        'template' => PageTemplate::class,
     ],
 
     /*
@@ -32,7 +40,15 @@ return [
     'tables' => [
         'pages' => 'fpb_pages',
         'page_revisions' => 'fpb_page_revisions',
+        'templates' => 'fpb_templates',
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Security Settings
+    |--------------------------------------------------------------------------
+    */
+    'allow_raw_html' => false,
 
     /*
     |--------------------------------------------------------------------------
@@ -96,5 +112,11 @@ return [
         SpacerWidget::class,
         IconWidget::class,
         VideoWidget::class,
+        HtmlWidget::class,
+        ImageGalleryWidget::class,
+        AlertWidget::class,
+        AccordionWidget::class,
+        TabsWidget::class,
+        TestimonialWidget::class,
     ],
 ];

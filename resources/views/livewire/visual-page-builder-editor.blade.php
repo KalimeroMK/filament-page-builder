@@ -52,7 +52,7 @@
 >
     <style>{!! $generatedCss !!}</style>
 
-    {{-- Top Editor Toolbar: Page Status + Viewport Switcher + Save Draft / Preview / Publish --}}
+    {{-- Top Editor Toolbar: Page Status + Undo/Redo + Viewport Switcher + Save Draft / Preview / Publish --}}
     <header style="display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; background: #0f172a; color: #f8fafc; border-bottom: 1px solid #1e293b; gap: 16px; flex-wrap: wrap;">
         <div style="display: flex; align-items: center; gap: 12px;">
             <span style="font-weight: 700; font-size: 15px;">{{ $pageSettingsData['title'] ?? $page->title }}</span>
@@ -68,17 +68,50 @@
             @endif
         </div>
 
-        {{-- Responsive Viewport Switcher --}}
-        <div style="display: flex; align-items: center; gap: 6px; background: #1e293b; padding: 4px; border-radius: 8px;">
-            @foreach(['desktop' => 'Desktop', 'tablet' => 'Tablet (1024px)', 'mobile' => 'Mobile (375px)'] as $vpKey => $vpLabel)
+        {{-- Undo / Redo / Paste + Responsive Viewport Switcher --}}
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 4px; background: #1e293b; padding: 4px; border-radius: 8px;">
                 <button
                     type="button"
-                    wire:click="setViewport('{{ $vpKey }}')"
-                    style="padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; border: 0; cursor: pointer; background: {{ $viewport === $vpKey ? '#2563eb' : 'transparent' }}; color: #f8fafc;"
+                    wire:click="undo"
+                    @disabled(empty($historyStack))
+                    title="Undo"
+                    style="padding: 5px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; border: 0; cursor: {{ empty($historyStack) ? 'not-allowed' : 'pointer' }}; opacity: {{ empty($historyStack) ? '0.4' : '1' }}; background: transparent; color: #f8fafc;"
                 >
-                    {{ $vpLabel }}
+                    ↶ Undo
                 </button>
-            @endforeach
+                <button
+                    type="button"
+                    wire:click="redo"
+                    @disabled(empty($redoStack))
+                    title="Redo"
+                    style="padding: 5px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; border: 0; cursor: {{ empty($redoStack) ? 'not-allowed' : 'pointer' }}; opacity: {{ empty($redoStack) ? '0.4' : '1' }}; background: transparent; color: #f8fafc;"
+                >
+                    ↷ Redo
+                </button>
+                @if($clipboardElement !== null)
+                    <button
+                        type="button"
+                        wire:click="pasteElement"
+                        title="Paste Copied Block"
+                        style="padding: 5px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; border: 0; cursor: pointer; background: #334155; color: #38bdf8;"
+                    >
+                        Paste Block
+                    </button>
+                @endif
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 6px; background: #1e293b; padding: 4px; border-radius: 8px;">
+                @foreach(['desktop' => 'Desktop', 'tablet' => 'Tablet (1024px)', 'mobile' => 'Mobile (375px)'] as $vpKey => $vpLabel)
+                    <button
+                        type="button"
+                        wire:click="setViewport('{{ $vpKey }}')"
+                        style="padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; border: 0; cursor: pointer; background: {{ $viewport === $vpKey ? '#2563eb' : 'transparent' }}; color: #f8fafc;"
+                    >
+                        {{ $vpLabel }}
+                    </button>
+                @endforeach
+            </div>
         </div>
 
         {{-- Draft / Preview / Publish Actions --}}
@@ -124,14 +157,14 @@
     {{-- Two-Column Workspace: Left Panel + Right Canvas --}}
     <div style="display: flex; flex: 1; min-height: 75vh;">
         {{-- Left Sidebar Panel --}}
-        <aside style="width: 350px; min-width: 350px; background: #ffffff; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column;">
+        <aside style="width: 360px; min-width: 360px; background: #ffffff; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column;">
             {{-- Sidebar Mode Switcher --}}
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
-                @foreach(['widgets' => '+ Elements', 'inspector' => 'Inspector', 'page_settings' => 'Page SEO'] as $tabKey => $tabLabel)
+            <div style="display: grid; grid-template-columns: repeat(5, 1fr); border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
+                @foreach(['widgets' => '+ Blocks', 'inspector' => 'Edit', 'templates' => 'Library', 'revisions' => 'History', 'page_settings' => 'SEO'] as $tabKey => $tabLabel)
                     <button
                         type="button"
                         wire:click="setLeftTab('{{ $tabKey }}')"
-                        style="padding: 10px 8px; font-size: 12px; font-weight: 600; border: 0; border-bottom: 2px solid {{ $leftTab === $tabKey ? '#2563eb' : 'transparent' }}; background: {{ $leftTab === $tabKey ? '#ffffff' : 'transparent' }}; color: {{ $leftTab === $tabKey ? '#2563eb' : '#475569' }}; cursor: pointer;"
+                        style="padding: 10px 4px; font-size: 11px; font-weight: 600; border: 0; border-bottom: 2px solid {{ $leftTab === $tabKey ? '#2563eb' : 'transparent' }}; background: {{ $leftTab === $tabKey ? '#ffffff' : 'transparent' }}; color: {{ $leftTab === $tabKey ? '#2563eb' : '#475569' }}; cursor: pointer;"
                     >
                         {{ $tabLabel }}
                     </button>
@@ -174,7 +207,7 @@
                     @endforeach
                 @endif
 
-                {{-- TAB 2: Active Element Inspector (Content / Style / Advanced via Filament v5 Schema) --}}
+                {{-- TAB 2: Active Element Inspector --}}
                 @if($leftTab === 'inspector')
                     @if($activeElement !== null && $activeIdSafe !== null)
                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
@@ -184,11 +217,12 @@
                                 </div>
                                 <div style="font-size: 11px; color: #64748b;">ID: {{ $activeIdSafe }}</div>
                             </div>
-                            <div style="display: flex; gap: 4px;">
-                                <button type="button" wire:click="moveElementUp('{{ $activeIdSafe }}')" title="Move Up" style="padding: 4px 8px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; cursor: pointer;">↑</button>
-                                <button type="button" wire:click="moveElementDown('{{ $activeIdSafe }}')" title="Move Down" style="padding: 4px 8px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; cursor: pointer;">↓</button>
-                                <button type="button" wire:click="duplicateElement('{{ $activeIdSafe }}')" title="Duplicate" style="padding: 4px 8px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; cursor: pointer;">Copy</button>
-                                <button type="button" wire:click="removeElement('{{ $activeIdSafe }}')" title="Delete" style="padding: 4px 8px; font-size: 11px; border: 1px solid #fecaca; border-radius: 4px; background: #fef2f2; color: #dc2626; cursor: pointer;">Del</button>
+                            <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                                <button type="button" wire:click="moveElementUp('{{ $activeIdSafe }}')" title="Move Up" style="padding: 4px 7px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; cursor: pointer;">↑</button>
+                                <button type="button" wire:click="moveElementDown('{{ $activeIdSafe }}')" title="Move Down" style="padding: 4px 7px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; cursor: pointer;">↓</button>
+                                <button type="button" wire:click="copyElement('{{ $activeIdSafe }}')" title="Copy to Clipboard" style="padding: 4px 7px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; cursor: pointer;">Copy</button>
+                                <button type="button" wire:click="duplicateElement('{{ $activeIdSafe }}')" title="Duplicate" style="padding: 4px 7px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; cursor: pointer;">Clone</button>
+                                <button type="button" wire:click="removeElement('{{ $activeIdSafe }}')" title="Delete" style="padding: 4px 7px; font-size: 11px; border: 1px solid #fecaca; border-radius: 4px; background: #fef2f2; color: #dc2626; cursor: pointer;">Del</button>
                             </div>
                         </div>
 
@@ -202,24 +236,150 @@
                     @endif
                 @endif
 
-                {{-- TAB 3: Page Settings & SEO --}}
+                {{-- TAB 3: Template Library + Import/Export --}}
+                @if($leftTab === 'templates')
+                    <div style="display: flex; flex-direction: column; gap: 16px;">
+                        <div style="padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+                            <div style="font-size: 12px; font-weight: 700; margin-bottom: 8px;">Save Current Layout as Template</div>
+                            <input
+                                type="text"
+                                wire:model="newTemplateName"
+                                placeholder="Template name (e.g. Hero Section)"
+                                style="width: 100%; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; margin-bottom: 6px;"
+                            />
+                            @error('newTemplateName')
+                                <div style="color: #dc2626; font-size: 11px; margin-bottom: 6px;">{{ $message }}</div>
+                            @enderror
+                            <div style="display: flex; gap: 6px;">
+                                <button
+                                    type="button"
+                                    wire:click="saveAsTemplate(false)"
+                                    style="flex: 1; padding: 6px 10px; background: #2563eb; color: #fff; border: 0; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer;"
+                                >
+                                    Save Full Page
+                                </button>
+                                @if($activeElementId !== null)
+                                    <button
+                                        type="button"
+                                        wire:click="saveAsTemplate(true)"
+                                        style="flex: 1; padding: 6px 10px; background: #0f172a; color: #fff; border: 0; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer;"
+                                    >
+                                        Save Selected Block
+                                    </button>
+                                @endif
+                            </div>
+                        </div>
+
+                        <div>
+                            <div style="font-size: 12px; font-weight: 700; margin-bottom: 8px;">Saved Database Templates</div>
+                            @forelse($savedTemplates as $tpl)
+                                <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 6px; font-size: 12px;">
+                                    <div>
+                                        <strong>{{ $tpl->name }}</strong>
+                                        <span style="color: #64748b; font-size: 11px;">({{ $tpl->category }})</span>
+                                    </div>
+                                    <div style="display: flex; gap: 4px;">
+                                        <button type="button" wire:click="applyDatabaseTemplate({{ (int) $tpl->id }}, true)" style="padding: 4px 8px; font-size: 11px; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; border-radius: 4px; cursor: pointer;">+ Insert</button>
+                                        <button type="button" wire:click="applyDatabaseTemplate({{ (int) $tpl->id }}, false)" style="padding: 4px 8px; font-size: 11px; background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer;">Replace</button>
+                                    </div>
+                                </div>
+                            @empty
+                                <div style="font-size: 12px; color: #64748b;">No saved templates yet.</div>
+                            @endforelse
+                        </div>
+
+                        @if(!empty($registeredTemplates))
+                            <div>
+                                <div style="font-size: 12px; font-weight: 700; margin-bottom: 8px;">Starter / Add-on Templates</div>
+                                @foreach($registeredTemplates as $tplKey => $regTpl)
+                                    @php $safeTplKey = preg_replace('/[^a-zA-Z0-9_.\-]/', '', (string) $tplKey); @endphp
+                                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 6px; font-size: 12px;">
+                                        <strong>{{ $regTpl['name'] }}</strong>
+                                        <button type="button" wire:click="applyRegisteredTemplate('{{ $safeTplKey }}', true)" style="padding: 4px 8px; font-size: 11px; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; border-radius: 4px; cursor: pointer;">+ Insert</button>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        <div style="padding-top: 10px; border-top: 1px solid #e2e8f0;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                                <span style="font-size: 12px; font-weight: 700;">Import / Export JSON Schema</span>
+                                <button
+                                    type="button"
+                                    wire:click="exportCurrentSchemaJson"
+                                    style="padding: 3px 8px; font-size: 11px; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; border-radius: 4px; cursor: pointer;"
+                                >
+                                    Export Current JSON
+                                </button>
+                            </div>
+                            <textarea
+                                rows="4"
+                                wire:model="importJsonPayload"
+                                placeholder='Paste JSON schema here...'
+                                style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 11px; font-family: monospace; margin-bottom: 6px;"
+                            ></textarea>
+                            @error('importJsonPayload')
+                                <div style="color: #dc2626; font-size: 11px; margin-bottom: 6px;">{{ $message }}</div>
+                            @enderror
+                            <div style="display: flex; gap: 6px;">
+                                <button type="button" wire:click="importSchemaFromJson(null, true)" style="flex: 1; padding: 6px 10px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer;">Append JSON</button>
+                                <button type="button" wire:click="importSchemaFromJson(null, false)" style="flex: 1; padding: 6px 10px; background: #0f172a; color: #fff; border: 0; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer;">Replace Canvas</button>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
+                {{-- TAB 4: Revisions History --}}
+                @if($leftTab === 'revisions')
+                    <div>
+                        <div style="font-size: 12px; font-weight: 700; margin-bottom: 10px;">Published Revisions</div>
+                        @forelse($revisions as $rev)
+                            <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 8px; font-size: 12px;">
+                                <div>
+                                    <div><strong>v{{ $rev->version_number }}</strong> — {{ $rev->summary ?? 'Published snapshot' }}</div>
+                                    <div style="font-size: 11px; color: #64748b;">{{ $rev->created_at?->format('Y-m-d H:i:s') }}</div>
+                                </div>
+                                <button
+                                    type="button"
+                                    wire:click="restoreRevisionInEditor({{ (int) $rev->id }})"
+                                    style="padding: 5px 10px; font-size: 11px; font-weight: 600; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer;"
+                                >
+                                    Restore
+                                </button>
+                            </div>
+                        @empty
+                            <div style="font-size: 12px; color: #64748b;">No published revisions yet. Click Publish to create v1.</div>
+                        @endforelse
+                    </div>
+                @endif
+
+                {{-- TAB 5: Page Settings & SEO --}}
                 @if($leftTab === 'page_settings')
                     <div style="display: flex; flex-direction: column; gap: 12px;">
                         <div>
                             <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Page Title</label>
                             <input type="text" wire:model.live="pageSettingsData.title" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;" />
+                            @error('pageSettingsData.title')
+                                <div style="color: #dc2626; font-size: 11px; margin-top: 4px;">{{ $message }}</div>
+                            @enderror
                         </div>
                         <div>
                             <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">URL Slug</label>
                             <input type="text" wire:model.live="pageSettingsData.slug" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;" />
+                            @error('pageSettingsData.slug')
+                                <div style="color: #dc2626; font-size: 11px; margin-top: 4px;">{{ $message }}</div>
+                            @enderror
                         </div>
                         <div>
                             <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Layout</label>
                             <select wire:model.live="pageSettingsData.layout" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
-                                <option value="default">Default Theme Layout</option>
-                                <option value="canvas">Elementor Canvas (No Header/Footer)</option>
-                                <option value="full_width">Full Width</option>
+                                @foreach($availableLayouts as $layoutKey)
+                                    <option value="{{ $layoutKey }}">{{ ucfirst(str_replace('_', ' ', (string) $layoutKey)) }}</option>
+                                @endforeach
                             </select>
+                            @error('pageSettingsData.layout')
+                                <div style="color: #dc2626; font-size: 11px; margin-top: 4px;">{{ $message }}</div>
+                            @enderror
                         </div>
                         <div>
                             <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">SEO Meta Title</label>

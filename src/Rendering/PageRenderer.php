@@ -83,6 +83,66 @@ class PageRenderer
     }
 
     /**
+     * Generate only the responsive CSS for a schema tree without rendering Blade HTML views.
+     * Used by the visual editor canvas to avoid duplicate widget view rendering.
+     *
+     * @param  array<string, mixed>  $schema
+     * @param  array<string, mixed>  $context
+     */
+    public function generateCssForSchema(array $schema, array $context = []): string
+    {
+        $normalized = Page::normalizeSchema($schema);
+
+        /** @var array<int, string> $cssChunks */
+        $cssChunks = [$this->cssGenerator->baseStyles()];
+
+        foreach ($normalized['elements'] as $element) {
+            if (is_array($element)) {
+                $this->collectElementCss($element, $context, $cssChunks);
+            }
+        }
+
+        return implode("\n", array_filter($cssChunks));
+    }
+
+    /**
+     * @param  array<string, mixed>  $element
+     * @param  array<string, mixed>  $context
+     * @param  array<int, string>  $cssChunks
+     */
+    protected function collectElementCss(array $element, array $context, array &$cssChunks): void
+    {
+        $type = (string) ($element['type'] ?? '');
+        $id = filled($element['id'] ?? null) ? (string) $element['id'] : uniqid('el_');
+        $widget = $this->widgets->get($type);
+
+        if ($widget === null) {
+            return;
+        }
+
+        $rawSettings = is_array($element['settings'] ?? null) ? $element['settings'] : [];
+        $settings = array_merge($widget::getDefaultSettings(), $rawSettings);
+
+        $dynamicMap = is_array($element['dynamic'] ?? null) ? $element['dynamic'] : [];
+        if ($dynamicMap !== []) {
+            $settings = $this->dynamicTags->resolveElementSettings($settings, $dynamicMap, $context);
+        }
+
+        $elementCss = $this->cssGenerator->generateForElement($id, $widget, $settings);
+        if ($elementCss !== '') {
+            $cssChunks[] = $elementCss;
+        }
+
+        if ($widget::isContainer() && ! empty($element['children']) && is_array($element['children'])) {
+            foreach ($element['children'] as $child) {
+                if (is_array($child)) {
+                    $this->collectElementCss($child, $context, $cssChunks);
+                }
+            }
+        }
+    }
+
+    /**
      * @param  array<string, mixed>  $element
      * @param  array<string, mixed>  $context
      * @param  array<int, string>  $cssChunks

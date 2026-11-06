@@ -33,6 +33,7 @@
                     {{ $isTargetContainer ? '✓ Target' : '+ Target' }}
                 </button>
             @endif
+            <button type="button" wire:click.stop="copyElement('{{ $elId }}')" style="background: transparent; border: 0; color: inherit; cursor: pointer; font-size: 10px;">Copy</button>
             <button type="button" wire:click.stop="duplicateElement('{{ $elId }}')" style="background: transparent; border: 0; color: inherit; cursor: pointer; font-size: 10px;">Duplicate</button>
             <button type="button" wire:click.stop="removeElement('{{ $elId }}')" style="background: transparent; border: 0; color: inherit; cursor: pointer; font-size: 10px;">×</button>
         </span>

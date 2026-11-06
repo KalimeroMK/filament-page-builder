@@ -147,6 +147,85 @@ class CssGenerator
     border: 0;
     display: block;
 }
+.fpb-gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--fpb-gallery-cols, 3), minmax(0, 1fr));
+    gap: var(--fpb-gap, 16px);
+}
+.fpb-gallery-img {
+    width: 100%;
+    height: auto;
+    border-radius: var(--fpb-radius, 8px);
+    object-fit: cover;
+    display: block;
+}
+.fpb-alert {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 18px;
+    border-radius: var(--fpb-radius, 8px);
+    border: 1px solid transparent;
+}
+.fpb-alert--info { background: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
+.fpb-alert--success { background: #f0fdf4; color: #166534; border-color: #bbf7d0; }
+.fpb-alert--warning { background: #fffbeb; color: #92400e; border-color: #fde68a; }
+.fpb-alert--danger { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+.fpb-alert-title { font-weight: 700; margin-bottom: 4px; }
+.fpb-alert-close { background: transparent; border: 0; font-size: 18px; line-height: 1; cursor: pointer; color: inherit; }
+.fpb-accordion {
+    border: 1px solid var(--fpb-border-color, #e2e8f0);
+    border-radius: var(--fpb-radius, 8px);
+    overflow: hidden;
+}
+.fpb-accordion-item + .fpb-accordion-item {
+    border-top: 1px solid var(--fpb-border-color, #e2e8f0);
+}
+.fpb-accordion-trigger {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    background: #ffffff;
+    color: var(--fpb-title-color, #0f172a);
+    font-weight: 600;
+    font-size: 15px;
+    border: 0;
+    cursor: pointer;
+    text-align: left;
+}
+.fpb-accordion-content {
+    padding: 0 18px 16px 18px;
+    color: #475569;
+    line-height: 1.6;
+}
+.fpb-tabs-nav {
+    display: flex;
+    gap: 8px;
+    border-bottom: 1px solid #e2e8f0;
+    margin-bottom: 14px;
+}
+.fpb-tabs-btn {
+    padding: 10px 16px;
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+}
+.fpb-tabs-btn.is-active {
+    color: var(--fpb-active-color, #2563eb);
+    border-bottom-color: var(--fpb-active-color, #2563eb);
+}
+.fpb-testimonial {
+    background-color: var(--fpb-bg, #f8fafc);
+    color: var(--fpb-color, #1e293b);
+    border-radius: var(--fpb-radius, 12px);
+    text-align: var(--fpb-text-align, left);
+}
 CSS;
     }
 

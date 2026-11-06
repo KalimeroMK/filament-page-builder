@@ -14,6 +14,7 @@
         <meta name="robots" content="noindex, nofollow">
     @endif
     <style>
+        [x-cloak] { display: none !important; }
         body {
             margin: 0;
             font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -24,6 +25,7 @@
             width: 100%;
         }
     </style>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
 </head>
 <body>
     @includeWhen(!empty($isPreview), 'filament-page-builder::components.preview-bar', ['page' => $page])

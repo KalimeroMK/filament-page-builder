@@ -71,6 +71,7 @@
             x-show="open"
             x-cloak
             x-on:keydown.escape.window="close()"
+            x-on:click.self="close()"
             role="dialog"
             aria-modal="true"
             aria-labelledby="{{ $popupKey }}_title"

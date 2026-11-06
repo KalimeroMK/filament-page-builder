@@ -122,7 +122,7 @@ class MaintenanceSettingsPage extends Page implements HasSchemas
             'enabled' => (bool) ($state['enabled'] ?? false),
             'message' => (string) ($state['message'] ?? ''),
             'template_id' => $state['template_id'] !== null ? (int) $state['template_id'] : null,
-            'retry_after_minutes' => max(0, min(525600, (int) ($state['retry_after_minutes'] ?? 60)),
+            'retry_after_minutes' => max(0, min(525600, (int) ($state['retry_after_minutes'] ?? 60))),
         ]);
 
         Notification::make()

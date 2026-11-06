@@ -222,14 +222,14 @@
 
 | Верзија | Содржина | Што се објавува |
 | --- | --- | --- |
-| **v0.1** | Filament v5 плагин скелет, `Page` модел со `draft_content` / `content` / `status`, Preview & Publish сервис, JSON Schema + CSS/Blade рендерер, Add-on API контракти + 4 основни елементи (`Container`, `Heading`, `Text`, `Button`) + Filament Page Resource | Доказ дека концептот држи + основа за едиторот |
-| **v0.2** | Визуелен Livewire v4 едитор: Топ-бар со **Save Draft / Preview / Publish**, лев панел со widgets, десен canvas, `Filament\Schemas\Schema` инспектор (Content/Style/Advanced), drag & drop | **Прва јавна објава на GitHub** |
-| **v0.3** | Полна контрола за Responsive (Desktop/Tablet/Mobile), Undo/Redo, Ревизии (`page_revisions`), Templates library + преостанати базни widgets |  |
-| **v0.4** | Theme Builder (Header/Footer/Single + услови за прикажување) + Navigator дрво |  |
-| **v0.5** | Dynamic Content (Dynamic Tags) + Loop Builder |  |
-| **v0.6** | Form Builder со pluggable акции |  |
-| **v0.7** | Popup Builder + conditional forms |  |
-| **v1.0** | Полирање, тестови (Pest), документација, демо сајт, Packagist | **Официјален v1.0 Launch** |
+| **v0.1** ✅ | Filament v5 плагин скелет, `Page` модел со `draft_content` / `content` / `status`, Preview & Publish сервис, JSON Schema + CSS/Blade рендерер, Add-on API контракти + 4 основни елементи (`Container`, `Heading`, `Text`, `Button`) + Filament Page Resource | Доказ дека концептот држи + основа за едиторот |
+| **v0.2** ✅ | Визуелен Livewire v4 едитор: Топ-бар со **Save Draft / Preview / Publish**, лев панел со widgets, десен canvas, `Filament\Schemas\Schema` инспектор (Content/Style/Advanced), drag & drop | **Прва јавна објава на GitHub** |
+| **v0.3** ✅ | Полна контрола за Responsive (Desktop/Tablet/Mobile), Undo/Redo, Ревизии (`page_revisions`), Templates library + преостанати базни widgets |  |
+| **v0.4** ✅ | Theme Builder (Header/Footer/Single + услови за прикажување) + Navigator дрво |  |
+| **v0.5** ✅ | Dynamic Content (Dynamic Tags) + Loop Builder |  |
+| **v0.6** ✅ | Form Builder со pluggable акции |  |
+| **v0.7** ✅ | Popup Builder + conditional forms |  |
+| **v1.0** ✅ | Полирање, тестови (Pest), документација, демо сајт, Packagist | **Официјален v1.0 Launch** |
 
 ---
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace KalimeroMK\FilamentPageBuilder\Services;
 
+use KalimeroMK\FilamentPageBuilder\Enums\ThemeRegionType;
 use KalimeroMK\FilamentPageBuilder\Models\Page;
 use KalimeroMK\FilamentPageBuilder\Registries\DynamicTagRegistry;
 use KalimeroMK\FilamentPageBuilder\Registries\TemplateRegistry;
@@ -19,6 +20,7 @@ class PageBuilderManager
         protected TemplateRegistry $templates,
         protected PageRenderer $renderer,
         protected PagePublishService $publisher,
+        protected ThemeResolver $theme,
     ) {}
 
     public function widgets(): WidgetRegistry
@@ -41,6 +43,11 @@ class PageBuilderManager
         return $this->publisher;
     }
 
+    public function theme(): ThemeResolver
+    {
+        return $this->theme;
+    }
+
     /**
      * @param  array<string, mixed>  $context
      */
@@ -56,5 +63,13 @@ class PageBuilderManager
     public function renderSchema(array $schema, array $context = []): RenderedPage
     {
         return $this->renderer->renderSchema($schema, $context);
+    }
+
+    /**
+     * @param  array<string, mixed>  $context
+     */
+    public function renderThemeRegion(string | ThemeRegionType $region, array $context = []): RenderedPage
+    {
+        return $this->theme->renderRegion($region, $context);
     }
 }

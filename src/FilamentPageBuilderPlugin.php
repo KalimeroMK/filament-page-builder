@@ -7,11 +7,14 @@ namespace KalimeroMK\FilamentPageBuilder;
 use Filament\Contracts\Plugin;
 use Filament\Panel;
 use KalimeroMK\FilamentPageBuilder\Filament\Resources\PageResource;
+use KalimeroMK\FilamentPageBuilder\Filament\Resources\ThemeTemplateResource;
 use UnitEnum;
 
 class FilamentPageBuilderPlugin implements Plugin
 {
     protected bool $hasPageResource = true;
+
+    protected bool $hasThemeTemplateResource = true;
 
     protected string | UnitEnum | null $navigationGroup = 'Content';
 
@@ -47,6 +50,18 @@ class FilamentPageBuilderPlugin implements Plugin
         return $this->hasPageResource;
     }
 
+    public function themeTemplateResource(bool $condition = true): static
+    {
+        $this->hasThemeTemplateResource = $condition;
+
+        return $this;
+    }
+
+    public function hasThemeTemplateResource(): bool
+    {
+        return $this->hasThemeTemplateResource;
+    }
+
     public function navigationGroup(string | UnitEnum | null $group): static
     {
         $this->navigationGroup = $group;
@@ -73,10 +88,18 @@ class FilamentPageBuilderPlugin implements Plugin
 
     public function register(Panel $panel): void
     {
+        $resources = [];
+
         if ($this->hasPageResource()) {
-            $panel->resources([
-                PageResource::class,
-            ]);
+            $resources[] = PageResource::class;
+        }
+
+        if ($this->hasThemeTemplateResource()) {
+            $resources[] = ThemeTemplateResource::class;
+        }
+
+        if ($resources !== []) {
+            $panel->resources($resources);
         }
     }
 

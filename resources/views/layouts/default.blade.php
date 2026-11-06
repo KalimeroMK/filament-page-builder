@@ -29,8 +29,12 @@
 </head>
 <body>
     @includeWhen(!empty($isPreview), 'filament-page-builder::components.preview-bar', ['page' => $page])
-    <main id="fpb-viewport-frame" class="fpb-layout-default">
-        @yield('fpb-content')
-    </main>
+    <div id="fpb-viewport-frame">
+        @filamentThemeRegion('header', ['page' => $page])
+        <main class="fpb-layout-default">
+            @yield('fpb-content')
+        </main>
+        @filamentThemeRegion('footer', ['page' => $page])
+    </div>
 </body>
 </html>

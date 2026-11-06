@@ -18,6 +18,8 @@ use KalimeroMK\FilamentPageBuilder\Rendering\PageRenderer;
 use KalimeroMK\FilamentPageBuilder\Services\PageBuilderManager;
 use KalimeroMK\FilamentPageBuilder\Services\PageCacheService;
 use KalimeroMK\FilamentPageBuilder\Services\PagePublishService;
+use KalimeroMK\FilamentPageBuilder\Services\ThemeConditionMatcher;
+use KalimeroMK\FilamentPageBuilder\Services\ThemeResolver;
 use Livewire\Livewire;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
@@ -37,6 +39,7 @@ class FilamentPageBuilderServiceProvider extends PackageServiceProvider
                 'create_fpb_pages_table',
                 'create_fpb_page_revisions_table',
                 'create_fpb_templates_table',
+                'create_fpb_theme_templates_table',
             ]);
     }
 
@@ -47,6 +50,7 @@ class FilamentPageBuilderServiceProvider extends PackageServiceProvider
         $this->app->singleton(TemplateRegistry::class, fn () => new TemplateRegistry());
         $this->app->singleton(CssGenerator::class, fn () => new CssGenerator());
         $this->app->singleton(PageCacheService::class, fn () => new PageCacheService());
+        $this->app->singleton(ThemeConditionMatcher::class, fn () => new ThemeConditionMatcher());
 
         $this->app->singleton(PageRenderer::class, function ($app) {
             return new PageRenderer(
@@ -54,6 +58,13 @@ class FilamentPageBuilderServiceProvider extends PackageServiceProvider
                 dynamicTags: $app->make(DynamicTagRegistry::class),
                 cssGenerator: $app->make(CssGenerator::class),
                 cache: $app->make(PageCacheService::class),
+            );
+        });
+
+        $this->app->singleton(ThemeResolver::class, function ($app) {
+            return new ThemeResolver(
+                matcher: $app->make(ThemeConditionMatcher::class),
+                renderer: $app->make(PageRenderer::class),
             );
         });
 
@@ -70,6 +81,7 @@ class FilamentPageBuilderServiceProvider extends PackageServiceProvider
                 templates: $app->make(TemplateRegistry::class),
                 renderer: $app->make(PageRenderer::class),
                 publisher: $app->make(PagePublishService::class),
+                theme: $app->make(ThemeResolver::class),
             );
         });
     }
@@ -116,6 +128,10 @@ class FilamentPageBuilderServiceProvider extends PackageServiceProvider
     {
         Blade::directive('renderPageBuilder', function (string $expression): string {
             return "<?php echo app(\\KalimeroMK\\FilamentPageBuilder\\Rendering\\PageRenderer::class)->renderPage({$expression})->toHtml(); ?>";
+        });
+
+        Blade::directive('filamentThemeRegion', function (string $expression): string {
+            return "<?php echo app(\\KalimeroMK\\FilamentPageBuilder\\Services\\ThemeResolver::class)->renderRegion({$expression})->toHtml(); ?>";
         });
     }
 }

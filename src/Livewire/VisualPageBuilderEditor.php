@@ -694,6 +694,25 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
         $this->applyElementsMutation($updated);
     }
 
+    public function toggleElementVisibility(string $elementId): void
+    {
+        $element = SchemaTreeManipulator::findElement($this->schema['elements'], $elementId);
+        if ($element === null) {
+            return;
+        }
+
+        $isCurrentlyHidden = ! empty($element['settings']['hide_element']);
+        $updated = SchemaTreeManipulator::updateElementSettings(
+            $this->schema['elements'],
+            $elementId,
+            ['hide_element' => ! $isCurrentlyHidden],
+        );
+
+        if ($this->applyElementsMutation($updated) && $this->activeElementId === $elementId) {
+            $this->inspectorData['hide_element'] = ! $isCurrentlyHidden;
+        }
+    }
+
     public function setViewport(string $viewport): void
     {
         if (in_array($viewport, ['desktop', 'tablet', 'mobile'], true)) {
@@ -703,7 +722,7 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
 
     public function setLeftTab(string $tab): void
     {
-        if (in_array($tab, ['widgets', 'inspector', 'templates', 'revisions', 'page_settings'], true)) {
+        if (in_array($tab, ['widgets', 'inspector', 'navigator', 'templates', 'revisions', 'page_settings'], true)) {
             $this->leftTab = $tab;
         }
     }

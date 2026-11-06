@@ -30,6 +30,7 @@ return [
         'page' => Page::class,
         'page_revision' => PageRevision::class,
         'template' => PageTemplate::class,
+        'theme_template' => \KalimeroMK\FilamentPageBuilder\Models\ThemeTemplate::class,
     ],
 
     /*
@@ -41,6 +42,7 @@ return [
         'pages' => 'fpb_pages',
         'page_revisions' => 'fpb_page_revisions',
         'templates' => 'fpb_templates',
+        'theme_templates' => 'fpb_theme_templates',
     ],
 
     /*

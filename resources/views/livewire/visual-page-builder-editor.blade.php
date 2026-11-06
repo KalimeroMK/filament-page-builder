@@ -159,12 +159,12 @@
         {{-- Left Sidebar Panel --}}
         <aside style="width: 360px; min-width: 360px; background: #ffffff; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column;">
             {{-- Sidebar Mode Switcher --}}
-            <div style="display: grid; grid-template-columns: repeat(5, 1fr); border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
-                @foreach(['widgets' => '+ Blocks', 'inspector' => 'Edit', 'templates' => 'Library', 'revisions' => 'History', 'page_settings' => 'SEO'] as $tabKey => $tabLabel)
+            <div style="display: grid; grid-template-columns: repeat(6, 1fr); border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
+                @foreach(['widgets' => '+ Blocks', 'inspector' => 'Edit', 'navigator' => 'Tree', 'templates' => 'Library', 'revisions' => 'History', 'page_settings' => 'SEO'] as $tabKey => $tabLabel)
                     <button
                         type="button"
                         wire:click="setLeftTab('{{ $tabKey }}')"
-                        style="padding: 10px 4px; font-size: 11px; font-weight: 600; border: 0; border-bottom: 2px solid {{ $leftTab === $tabKey ? '#2563eb' : 'transparent' }}; background: {{ $leftTab === $tabKey ? '#ffffff' : 'transparent' }}; color: {{ $leftTab === $tabKey ? '#2563eb' : '#475569' }}; cursor: pointer;"
+                        style="padding: 10px 2px; font-size: 11px; font-weight: 600; border: 0; border-bottom: 2px solid {{ $leftTab === $tabKey ? '#2563eb' : 'transparent' }}; background: {{ $leftTab === $tabKey ? '#ffffff' : 'transparent' }}; color: {{ $leftTab === $tabKey ? '#2563eb' : '#475569' }}; cursor: pointer;"
                     >
                         {{ $tabLabel }}
                     </button>
@@ -234,6 +234,28 @@
                             Select any element on the canvas to edit its Content, Style, and Advanced settings.
                         </div>
                     @endif
+                @endif
+
+                {{-- TAB 2.5: Navigator (Element Tree View) --}}
+                @if($leftTab === 'navigator')
+                    <div>
+                        <div style="font-size: 12px; font-weight: 700; margin-bottom: 10px; color: #0f172a;">
+                            Navigator (Element Tree)
+                        </div>
+                        @if(empty($schema['elements']))
+                            <div style="font-size: 12px; color: #64748b;">Canvas is empty. Add elements to inspect the tree.</div>
+                        @else
+                            @foreach($schema['elements'] as $treeEl)
+                                @if(is_array($treeEl))
+                                    @include('filament-page-builder::livewire.partials.navigator-tree-node', [
+                                        'element' => $treeEl,
+                                        'depth' => 0,
+                                        'activeElementId' => $activeElementId,
+                                    ])
+                                @endif
+                            @endforeach
+                        @endif
+                    </div>
                 @endif
 
                 {{-- TAB 3: Template Library + Import/Export --}}

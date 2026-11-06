@@ -134,6 +134,11 @@ class PageResource extends Resource
                                         ->label('Draft JSON Schema (v1)')
                                         ->language(Language::Json)
                                         ->json()
+                                        ->rule(static fn (): \Closure => function (string $attribute, mixed $value, \Closure $fail): void {
+                                            if (is_string($value) && trim($value) !== '' && ! is_array(json_decode($value, true))) {
+                                                $fail('The draft schema must be a valid JSON object.');
+                                            }
+                                        })
                                         ->columnSpanFull(),
                                 ]),
                         ]),

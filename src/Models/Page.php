@@ -118,7 +118,9 @@ class Page extends Model
 
     public function isPublished(): bool
     {
-        return $this->status === PageStatus::Published && $this->content !== null;
+        return $this->status === PageStatus::Published
+            && $this->content !== null
+            && ($this->published_at === null || $this->published_at->lte(Carbon::now()));
     }
 
     public function isDraft(): bool

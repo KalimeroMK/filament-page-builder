@@ -7,6 +7,9 @@
     @if(!empty($page->meta['meta_description']))
         <meta name="description" content="{{ $page->meta['meta_description'] }}">
     @endif
+    @if(!empty($page->meta['og_image']))
+        <meta property="og:image" content="{{ $page->meta['og_image'] }}">
+    @endif
     @if(!empty($page->meta['noindex']) || !empty($isPreview))
         <meta name="robots" content="noindex, nofollow">
     @endif

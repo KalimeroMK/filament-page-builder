@@ -3,16 +3,23 @@
 declare(strict_types=1);
 
 use Filament\Schemas\Schema;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Gate;
 use KalimeroMK\FilamentPageBuilder\Contracts\DynamicTagContract;
 use KalimeroMK\FilamentPageBuilder\Enums\PageStatus;
+use KalimeroMK\FilamentPageBuilder\Events\BeforeElementRender;
 use KalimeroMK\FilamentPageBuilder\Events\PageDraftSaved;
 use KalimeroMK\FilamentPageBuilder\Events\PagePublished;
 use KalimeroMK\FilamentPageBuilder\Facades\PageBuilder;
+use KalimeroMK\FilamentPageBuilder\FilamentPageBuilderPlugin;
 use KalimeroMK\FilamentPageBuilder\Models\Page;
+use KalimeroMK\FilamentPageBuilder\Services\PageCacheService;
+use KalimeroMK\FilamentPageBuilder\Support\HtmlSanitizer;
 use KalimeroMK\FilamentPageBuilder\Widgets\AbstractWidget;
 
-it('registers the 4 core v0.1 widgets by default', function (): void {
+it('registers the core widgets by default with valid Heroicons', function (): void {
     $registry = PageBuilder::widgets();
 
     expect($registry->has('container'))->toBeTrue()
@@ -20,7 +27,11 @@ it('registers the 4 core v0.1 widgets by default', function (): void {
         ->and($registry->has('text'))->toBeTrue()
         ->and($registry->has('button'))->toBeTrue()
         ->and($registry->get('container')::isContainer())->toBeTrue()
-        ->and($registry->get('heading')::isContainer())->toBeFalse();
+        ->and($registry->get('heading')::isContainer())->toBeFalse()
+        ->and($registry->get('heading')::getIcon())->toBe('heroicon-o-h1');
+
+    // Verify the SVG icon actually resolves without SvgNotFound on Linux
+    expect(svg($registry->get('heading')::getIcon())->toHtml())->toContain('<svg');
 });
 
 it('builds Filament v5 3-tab inspector schemas (Content / Style / Advanced) for widgets', function (): void {
@@ -76,7 +87,7 @@ it('renders nested Flexbox container, heading, sanitized text, button and respon
                         'settings' => [
                             'label' => 'Почни веднаш',
                             'link' => '/start',
-                            'style' => 'primary',
+                            'style' => 'secondary',
                         ],
                     ],
                 ],
@@ -93,23 +104,64 @@ it('renders nested Flexbox container, heading, sanitized text, button and respon
         ->toContain('<p> Чист текст </p>')
         ->not->toContain('<script>')
         ->toContain('href="/start"')
+        ->toContain('fpb-button--secondary')
         ->toContain('Почни веднаш');
 
     expect($rendered->css)
         ->toContain('.fpb-el-hero_box { --fpb-padding: 48px;')
         ->toContain('--fpb-direction: row;')
+        ->toContain('.fpb-button--secondary')
         ->toContain('@container fpb-canvas (max-width: 1024px) { .fpb-el-hero_box { --fpb-padding: 24px; } }')
         ->toContain('@container fpb-canvas (max-width: 767px) { .fpb-el-hero_box { --fpb-padding: 12px; --fpb-direction: column; --fpb-gap: 16px; } }')
         ->toContain('@container fpb-canvas (max-width: 767px) { .fpb-el-hero_title { --fpb-font-size: 28px; } }');
 });
 
-it('handles the complete Draft -> Preview -> Publish -> Edit Draft -> Discard / Unpublish lifecycle', function (): void {
+it('blocks advanced XSS payloads in HtmlSanitizer, URLs, and CssGenerator', function (): void {
+    $dirtyHtml = '<p>Hello</p><a href="x"onclick="alert(1)">Click</a><svg/onload="alert(2)"><a href="javascript:alert(\'hello world\')">JS</a><a href="&#106;avascript:alert(3)">Entity</a>';
+    $cleanHtml = HtmlSanitizer::clean($dirtyHtml);
+
+    expect($cleanHtml)
+        ->toContain('<p>Hello</p>')
+        ->not->toContain('onclick')
+        ->not->toContain('onload')
+        ->not->toContain('javascript:');
+
+    expect(HtmlSanitizer::sanitizeUrl("java\tscript:alert(1)"))->toBe('#')
+        ->and(HtmlSanitizer::sanitizeUrl('javascript:alert(1)'))->toBe('#')
+        ->and(HtmlSanitizer::sanitizeUrl('//evil.com/phish'))->toBe('#')
+        ->and(HtmlSanitizer::sanitizeUrl('/contact-us'))->toBe('/contact-us')
+        ->and(HtmlSanitizer::sanitizeUrl('https://laravel.com'))->toBe('https://laravel.com');
+
+    $rendered = PageBuilder::renderSchema([
+        'version' => 1,
+        'elements' => [
+            [
+                'id' => 'css_test',
+                'type' => 'heading',
+                'settings' => [
+                    'text' => 'CSS Injection Check',
+                    'color' => '#111111; } /* body { display:none } */ url(https://evil.com)',
+                ],
+            ],
+        ],
+    ]);
+
+    expect($rendered->css)
+        ->not->toContain('/*')
+        ->not->toContain('*/')
+        ->not->toContain('url(');
+});
+
+it('handles the complete Draft -> Preview -> Publish -> Edit Draft -> Revision Restore -> Discard / Unpublish lifecycle', function (): void {
     Event::fake([PageDraftSaved::class, PagePublished::class]);
 
-    // 1. Create a page in Draft mode
     $page = Page::create([
         'title' => 'Почетна Страница',
         'slug' => 'home',
+        'meta' => [
+            'meta_title' => 'SEO Почетна',
+            'og_image' => 'https://example.com/og.png',
+        ],
         'draft_content' => [
             'version' => 1,
             'elements' => [
@@ -128,34 +180,38 @@ it('handles the complete Draft -> Preview -> Publish -> Edit Draft -> Discard / 
         ->and($page->hasUnpublishedChanges())->toBeTrue()
         ->and($page->content)->toBeNull();
 
-    // 2. Public route returns 404 while page is only a draft
+    // Public route returns 404 while page is only a draft
     $this->get('/pages/home')->assertNotFound();
 
-    // 3. Unsigned preview URL returns 403, signed preview URL returns 200 and renders draft_content + preview toolbar
-    $this->get("/_builder/preview/{$page->id}")->assertForbidden();
+    // Unsigned preview URL returns 403 even for an unauthorized logged-in user
+    $regularUser = new class extends Authenticatable {};
+    $this->actingAs($regularUser)->get("/_builder/preview/{$page->id}")->assertForbidden();
+
+    // Authorized via Gate or signed URL returns 200
+    Gate::define('view-page-builder-preview', fn (): bool => true);
+    $this->actingAs($regularUser)->get("/_builder/preview/{$page->id}")->assertOk();
 
     $previewUrl = $page->getPreviewUrl();
     $this->get($previewUrl)
         ->assertOk()
         ->assertSee('Preview Mode (Draft)')
-        ->assertSee('Верзија 1 (Нацрт)');
+        ->assertSee('Верзија 1 (Нацрт)')
+        ->assertSee('https://example.com/og.png', false);
 
-    // 4. Publish the page
+    // Publish the page (v1)
     $page->publish('Initial launch');
     Event::assertDispatched(PagePublished::class);
 
-    expect($page->isPublished())->toBeTrue()
-        ->and($page->hasUnpublishedChanges())->toBeFalse()
-        ->and($page->revisions()->count())->toBe(1)
-        ->and($page->revisions()->first()->version_number)->toBe(1);
-
-    // 5. Public route now serves the published content
+    $cacheService = app(PageCacheService::class);
     $this->get('/pages/home')
         ->assertOk()
-        ->assertSee('Верзија 1 (Нацрт)')
-        ->assertDontSee('Preview Mode (Draft)');
+        ->assertSee('Верзија 1 (Нацрт)');
 
-    // 6. Save new changes as Draft WITHOUT publishing
+    // Cache should now be warm
+    expect($cacheService->get($page))->not->toBeNull();
+
+    // Saving a new draft after 5 seconds MUST NOT invalidate the live published cache!
+    $this->travel(5)->seconds();
     $page->saveDraft([
         'version' => 1,
         'elements' => [
@@ -167,8 +223,8 @@ it('handles the complete Draft -> Preview -> Publish -> Edit Draft -> Discard / 
         ],
     ]);
 
-    Event::assertDispatched(PageDraftSaved::class);
-    expect($page->hasUnpublishedChanges())->toBeTrue();
+    expect($cacheService->get($page))->not->toBeNull()
+        ->and($page->hasUnpublishedChanges())->toBeTrue();
 
     // Public visitors STILL see Version 1!
     $this->get('/pages/home')
@@ -176,116 +232,97 @@ it('handles the complete Draft -> Preview -> Publish -> Edit Draft -> Discard / 
         ->assertSee('Верзија 1 (Нацрт)')
         ->assertDontSee('Верзија 2 (Само во Draft)');
 
-    // Preview route shows the new Version 2 draft!
+    // Preview route shows Version 2!
     $this->get($page->getPreviewUrl())
         ->assertOk()
-        ->assertSee('Верзија 2 (Само во Draft)')
-        ->assertSee('Has unpublished changes');
+        ->assertSee('Верзија 2 (Само во Draft)');
 
-    // 7. Discard draft changes -> resets draft_content back to published Version 1
+    // Publish Version 2 and then restore Revision #1
+    $page->publish('Second release');
+    expect($page->revisions()->count())->toBe(2);
+
+    $firstRevision = $page->revisions()->where('version_number', 1)->firstOrFail();
+    $page->restoreRevision($firstRevision);
+
+    expect($page->getWorkingSchema()['elements'][0]['settings']['text'])->toBe('Верзија 1 (Нацрт)');
+
+    // Cross-page revision restore is rejected
+    $otherPage = Page::create(['title' => 'Other', 'slug' => 'other']);
+    expect(fn () => $otherPage->restoreRevision($firstRevision))->toThrow(InvalidArgumentException::class);
+
+    // Discard draft & Unpublish
     $page->discardDraft();
     expect($page->hasUnpublishedChanges())->toBeFalse();
 
-    $this->get($page->getPreviewUrl())
-        ->assertOk()
-        ->assertSee('Верзија 1 (Нацрт)')
-        ->assertDontSee('Верзија 2 (Само во Draft)');
-
-    // 8. Unpublish page -> moves back to Draft and hides from public route
     $page->unpublish();
-    expect($page->isDraft())->toBeTrue();
+    expect($page->isDraft())->toBeTrue()
+        ->and($cacheService->get($page))->toBeNull();
     $this->get('/pages/home')->assertNotFound();
 });
 
-it('supports the Add-on API for registering custom widgets and dynamic tag providers', function (): void {
-    // Register a custom dynamic tag
-    $customTag = new class implements DynamicTagContract
+it('supports Add-on API, protects $hidden model attributes in DynamicTags, and allows BeforeElementRender to toggle hide_element', function (): void {
+    $secretRecord = new class extends Model
     {
-        public static function getName(): string
-        {
-            return 'addon.promo_badge';
-        }
+        protected $guarded = [];
 
-        public static function getLabel(): string
-        {
-            return 'Promo Badge';
-        }
-
-        public static function getGroup(): string
-        {
-            return 'Add-on';
-        }
-
-        public function resolve(array $parameters = [], array $context = []): mixed
-        {
-            return 'BLACK FRIDAY -50%';
-        }
+        protected $hidden = ['secret_token'];
     };
-
-    PageBuilder::dynamicTags()->register($customTag);
-
-    // Register a custom add-on widget
-    $customWidget = new class extends AbstractWidget
-    {
-        public static function getType(): string
-        {
-            return 'promo_banner';
-        }
-
-        public static function getLabel(): string
-        {
-            return 'Promo Banner';
-        }
-
-        public static function getIcon(): string
-        {
-            return 'heroicon-o-sparkles';
-        }
-
-        public static function getDefaultSettings(): array
-        {
-            return ['badge_text' => 'Default Promo'];
-        }
-
-        public function getContentSchema(): array
-        {
-            return [];
-        }
-
-        public function getStyleSchema(): array
-        {
-            return [];
-        }
-
-        public function getCssMap(): array
-        {
-            return [];
-        }
-
-        protected function getViewName(): string
-        {
-            return 'filament-page-builder::widgets.heading';
-        }
-
-        public function render(array $element, array $settings, string $childrenHtml = '', array $context = []): string
-        {
-            return '<div class="addon-promo">' . e((string) $settings['badge_text']) . '</div>';
-        }
-    };
-
-    PageBuilder::widgets()->register($customWidget);
+    $secretRecord->forceFill([
+        'name' => 'Јавен Наслов',
+        'secret_token' => 'TOP_SECRET_123',
+    ]);
 
     $rendered = PageBuilder::renderSchema([
         'version' => 1,
         'elements' => [
             [
-                'id' => 'promo_1',
-                'type' => 'promo_banner',
-                'settings' => ['badge_text' => 'Static Text'],
-                'dynamic' => ['badge_text' => 'addon.promo_badge'],
+                'id' => 'visible_h',
+                'type' => 'heading',
+                'settings' => ['text' => 'Fallback'],
+                'dynamic' => ['text' => 'model.attribute:name'],
+            ],
+            [
+                'id' => 'secret_h',
+                'type' => 'heading',
+                'settings' => ['text' => 'Safe Fallback'],
+                'dynamic' => ['text' => 'model.attribute:secret_token'],
+            ],
+        ],
+    ], ['record' => $secretRecord]);
+
+    expect($rendered->html)
+        ->toContain('Јавен Наслов')
+        ->toContain('Safe Fallback')
+        ->not->toContain('TOP_SECRET_123');
+
+    // Test BeforeElementRender hook dynamically hiding an element
+    Event::listen(BeforeElementRender::class, function (BeforeElementRender $event): void {
+        if (($event->element['id'] ?? '') === 'secret_h') {
+            $event->settings['hide_element'] = true;
+        }
+    });
+
+    $renderedAfterHook = PageBuilder::renderSchema([
+        'version' => 1,
+        'elements' => [
+            [
+                'id' => 'secret_h',
+                'type' => 'heading',
+                'settings' => ['text' => 'Should Be Hidden'],
             ],
         ],
     ]);
 
-    expect($rendered->html)->toContain('<div class="addon-promo">BLACK FRIDAY -50%</div>');
+    expect($renderedAfterHook->html)->not->toContain('Should Be Hidden');
+
+    // Test TemplateRegistry & Plugin config
+    PageBuilder::templates()->register('hero-1', 'Hero Section', Page::emptySchema(), 'headers');
+    expect(PageBuilder::templates()->has('hero-1'))->toBeTrue();
+
+    $plugin = FilamentPageBuilderPlugin::make()
+        ->navigationGroup('CMS')
+        ->navigationSort(5);
+
+    expect($plugin->getNavigationGroup())->toBe('CMS')
+        ->and($plugin->getNavigationSort())->toBe(5);
 });

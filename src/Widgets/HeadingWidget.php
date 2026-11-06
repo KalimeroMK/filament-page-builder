@@ -23,7 +23,7 @@ class HeadingWidget extends AbstractWidget
 
     public static function getIcon(): string
     {
-        return 'heroicon-o-H1';
+        return 'heroicon-o-h1';
     }
 
     public static function getDefaultSettings(): array

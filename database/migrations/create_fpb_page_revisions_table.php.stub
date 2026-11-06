@@ -24,7 +24,7 @@ return new class extends Migration
             $table->unsignedBigInteger('created_by')->nullable()->index();
             $table->timestamp('created_at')->useCurrent();
 
-            $table->index(['page_id', 'version_number']);
+            $table->unique(['page_id', 'version_number']);
         });
     }
 

@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace KalimeroMK\FilamentPageBuilder\Registries;
 
+use Illuminate\Database\Eloquent\Model;
 use InvalidArgumentException;
 use KalimeroMK\FilamentPageBuilder\Contracts\DynamicTagContract;
+use Stringable;
 
 class DynamicTagRegistry
 {
@@ -82,12 +84,17 @@ class DynamicTagRegistry
             return $tag->resolve($parameters, $context);
         }
 
-        // Fallback: allow dot-notation lookup directly from $context (e.g. "record.title" or "page.title")
-        return data_get($context, $tagName);
+        // Fallback dot-notation lookup on sanitized context (converting Models via toArray() to respect $hidden)
+        $safeContext = [];
+        foreach ($context as $ctxKey => $ctxVal) {
+            $safeContext[$ctxKey] = $ctxVal instanceof Model ? $ctxVal->toArray() : $ctxVal;
+        }
+
+        return data_get($safeContext, $tagName);
     }
 
     /**
-     * Merge resolved dynamic tag values over static widget settings.
+     * Merge resolved dynamic tag scalar values over static widget settings.
      *
      * @param  array<string, mixed>  $settings
      * @param  array<string, mixed>  $dynamicMap
@@ -104,8 +111,8 @@ class DynamicTagRegistry
             if (is_string($descriptor) || is_array($descriptor)) {
                 $resolved = $this->resolve($descriptor, $context);
 
-                if ($resolved !== null) {
-                    $settings[$settingKey] = $resolved;
+                if (is_scalar($resolved) || $resolved instanceof Stringable) {
+                    $settings[$settingKey] = (string) $resolved;
                 }
             }
         }

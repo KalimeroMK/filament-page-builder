@@ -49,7 +49,7 @@ class ContainerWidget extends AbstractWidget
             'gap_mobile' => null,
             'align_items' => 'stretch',
             'justify_content' => 'flex-start',
-            'max_width' => '1200px',
+            'max_width' => '100%',
             'background_color' => 'transparent',
             'border_radius' => 0,
             'padding' => 24,
@@ -139,7 +139,7 @@ class ContainerWidget extends AbstractWidget
             ]),
             TextInput::make('max_width')
                 ->label('Max Width (e.g. 1200px or 100%)')
-                ->default('1200px'),
+                ->default('100%'),
         ];
     }
 

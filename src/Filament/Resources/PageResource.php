@@ -7,7 +7,9 @@ namespace KalimeroMK\FilamentPageBuilder\Filament\Resources;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\CodeEditor;
+use Filament\Forms\Components\CodeEditor\Enums\Language;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -28,7 +30,9 @@ use KalimeroMK\FilamentPageBuilder\Enums\PageStatus;
 use KalimeroMK\FilamentPageBuilder\Filament\Resources\PageResource\Pages\CreatePage;
 use KalimeroMK\FilamentPageBuilder\Filament\Resources\PageResource\Pages\EditPage;
 use KalimeroMK\FilamentPageBuilder\Filament\Resources\PageResource\Pages\ListPages;
+use KalimeroMK\FilamentPageBuilder\FilamentPageBuilderPlugin;
 use KalimeroMK\FilamentPageBuilder\Models\Page;
+use UnitEnum;
 
 class PageResource extends Resource
 {
@@ -50,6 +54,28 @@ class PageResource extends Resource
     public static function getNavigationLabel(): string
     {
         return 'Pages';
+    }
+
+    public static function getNavigationGroup(): string | UnitEnum | null
+    {
+        $panel = Filament::getCurrentOrDefaultPanel();
+
+        if ($panel !== null && $panel->hasPlugin('filament-page-builder')) {
+            return FilamentPageBuilderPlugin::get()->getNavigationGroup();
+        }
+
+        return 'Content';
+    }
+
+    public static function getNavigationSort(): ?int
+    {
+        $panel = Filament::getCurrentOrDefaultPanel();
+
+        if ($panel !== null && $panel->hasPlugin('filament-page-builder')) {
+            return FilamentPageBuilderPlugin::get()->getNavigationSort();
+        }
+
+        return 10;
     }
 
     public static function form(Schema $schema): Schema
@@ -78,6 +104,7 @@ class PageResource extends Resource
                                             ->label('URL Slug')
                                             ->required()
                                             ->maxLength(255)
+                                            ->regex('/^[A-Za-z0-9\-_]+(?:\/[A-Za-z0-9\-_]+)*$/')
                                             ->unique(ignoreRecord: true),
                                     ]),
                                     Grid::make(2)->schema([
@@ -85,7 +112,9 @@ class PageResource extends Resource
                                             ->label('Status')
                                             ->options(PageStatus::class)
                                             ->default(PageStatus::Draft)
-                                            ->required(),
+                                            ->disabled()
+                                            ->dehydrated(false)
+                                            ->helperText('Use the Publish / Switch to Draft actions to control live publication.'),
                                         Select::make('layout')
                                             ->label('Page Layout')
                                             ->options([
@@ -102,6 +131,8 @@ class PageResource extends Resource
                                 ->schema([
                                     CodeEditor::make('draft_content_json')
                                         ->label('Draft JSON Schema (v1)')
+                                        ->language(Language::Json)
+                                        ->json()
                                         ->columnSpanFull(),
                                 ]),
                         ]),

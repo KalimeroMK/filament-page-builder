@@ -1,8 +1,6 @@
 @php
-    $link = trim((string) ($settings['link'] ?? '#'));
-    if ($link === '' || preg_match('/^\s*(javascript|vbscript|data):/i', $link)) {
-        $link = '#';
-    }
+    $rawLink = trim((string) ($settings['link'] ?? '#'));
+    $link = \KalimeroMK\FilamentPageBuilder\Support\HtmlSanitizer::sanitizeUrl($rawLink, '#');
     $stylePreset = preg_replace('/[^a-z0-9_-]/i', '', (string) ($settings['style'] ?? 'primary')) ?: 'primary';
     $openInNewTab = ! empty($settings['open_in_new_tab']);
 @endphp

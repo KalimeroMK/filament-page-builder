@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace KalimeroMK\FilamentPageBuilder\Rendering;
 
 use KalimeroMK\FilamentPageBuilder\Contracts\WidgetContract;
+use Stringable;
 
 class CssGenerator
 {
@@ -67,14 +68,84 @@ class CssGenerator
     padding: 12px 24px;
     background-color: var(--fpb-btn-bg, #2563eb);
     color: var(--fpb-btn-color, #ffffff);
+    border: 1px solid transparent;
     border-radius: var(--fpb-radius, 8px);
     font-size: var(--fpb-font-size, 16px);
     font-weight: 600;
     text-decoration: none;
     transition: opacity 0.15s ease-in-out;
 }
+.fpb-button--secondary {
+    background-color: var(--fpb-btn-bg, #475569);
+    color: var(--fpb-btn-color, #ffffff);
+}
+.fpb-button--outline {
+    background-color: var(--fpb-btn-bg, transparent);
+    color: var(--fpb-btn-color, #2563eb);
+    border-color: currentColor;
+}
+.fpb-button--dark {
+    background-color: var(--fpb-btn-bg, #0f172a);
+    color: var(--fpb-btn-color, #ffffff);
+}
 .fpb-button:hover {
     opacity: 0.92;
+}
+.fpb-image-wrap {
+    text-align: var(--fpb-text-align, center);
+}
+.fpb-image {
+    max-width: var(--fpb-max-width, 100%);
+    width: var(--fpb-width, auto);
+    height: var(--fpb-height, auto);
+    object-fit: var(--fpb-object-fit, cover);
+    border-radius: var(--fpb-radius, 0px);
+    display: inline-block;
+}
+.fpb-spacer {
+    height: var(--fpb-space, 32px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+.fpb-spacer-line {
+    width: var(--fpb-divider-width, 100%);
+    border-top-width: var(--fpb-divider-weight, 1px);
+    border-top-style: var(--fpb-divider-style, solid);
+    border-top-color: var(--fpb-divider-color, #e5e7eb);
+}
+.fpb-icon-wrap {
+    text-align: var(--fpb-text-align, center);
+}
+.fpb-icon-box {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--fpb-icon-color, #2563eb);
+    background-color: var(--fpb-icon-bg, transparent);
+    width: calc(var(--fpb-icon-size, 40px) * 1.6);
+    height: calc(var(--fpb-icon-size, 40px) * 1.6);
+    border-radius: var(--fpb-radius, 50%);
+}
+.fpb-icon-box svg {
+    width: var(--fpb-icon-size, 40px);
+    height: var(--fpb-icon-size, 40px);
+}
+.fpb-video-wrap {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    border-radius: var(--fpb-radius, 8px);
+    aspect-ratio: var(--fpb-aspect-ratio, 16 / 9);
+    background: #0f172a;
+}
+.fpb-video-wrap iframe,
+.fpb-video-wrap video {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
 }
 CSS;
     }
@@ -94,23 +165,28 @@ CSS;
         $mobileDecls = [];
 
         foreach ($widget->getCssMap() as $settingKey => $definition) {
-            $cssVar = $definition['var'];
+            $cssVar = $definition['var'] ?? '';
+
+            if (! preg_match('/^--[a-zA-Z0-9_-]+$/', $cssVar)) {
+                continue;
+            }
+
             $unit = $definition['unit'] ?? '';
 
-            $desktopVal = $this->extractResponsiveValue($settings, $settingKey, 'desktop');
-            $tabletVal = $this->extractResponsiveValue($settings, $settingKey, 'tablet');
-            $mobileVal = $this->extractResponsiveValue($settings, $settingKey, 'mobile');
+            $desktopVal = $this->formatCssValue($this->extractResponsiveValue($settings, $settingKey, 'desktop'), $unit);
+            $tabletVal = $this->formatCssValue($this->extractResponsiveValue($settings, $settingKey, 'tablet'), $unit);
+            $mobileVal = $this->formatCssValue($this->extractResponsiveValue($settings, $settingKey, 'mobile'), $unit);
 
-            if ($desktopVal !== null && $desktopVal !== '') {
-                $desktopDecls[] = "{$cssVar}: " . $this->formatCssValue($desktopVal, $unit) . ';';
+            if ($desktopVal !== '') {
+                $desktopDecls[] = "{$cssVar}: {$desktopVal};";
             }
 
-            if ($tabletVal !== null && $tabletVal !== '') {
-                $tabletDecls[] = "{$cssVar}: " . $this->formatCssValue($tabletVal, $unit) . ';';
+            if ($tabletVal !== '') {
+                $tabletDecls[] = "{$cssVar}: {$tabletVal};";
             }
 
-            if ($mobileVal !== null && $mobileVal !== '') {
-                $mobileDecls[] = "{$cssVar}: " . $this->formatCssValue($mobileVal, $unit) . ';';
+            if ($mobileVal !== '') {
+                $mobileDecls[] = "{$cssVar}: {$mobileVal};";
             }
         }
 
@@ -171,10 +247,23 @@ CSS;
 
     protected function formatCssValue(mixed $value, string $unit): string
     {
+        if ($value === null || (! is_scalar($value) && ! $value instanceof Stringable)) {
+            return '';
+        }
+
         $str = trim((string) $value);
 
-        // Strip characters that could break out of a CSS declaration
-        $str = str_replace([';', '{', '}', '<', '>'], '', $str);
+        if ($str === '') {
+            return '';
+        }
+
+        // Strip characters and sequences that could break out of a CSS declaration or load external resources
+        $str = preg_replace('/[;{}<>\\\\]|\/\*|\*\/|url\s*\(/i', '', $str) ?? '';
+        $str = trim($str);
+
+        if ($str === '') {
+            return '';
+        }
 
         if ($unit !== '' && is_numeric($str)) {
             return $str . $unit;

@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\URL;
 use KalimeroMK\FilamentPageBuilder\Enums\PageStatus;
+use KalimeroMK\FilamentPageBuilder\Services\PageCacheService;
 use KalimeroMK\FilamentPageBuilder\Services\PagePublishService;
 
 /**
@@ -43,6 +44,10 @@ class Page extends Model
             if ($page->draft_content === null) {
                 $page->draft_content = $page->content ?? static::emptySchema();
             }
+        });
+
+        static::deleted(function (Page $page): void {
+            app(PageCacheService::class)->forget($page);
         });
     }
 
@@ -138,7 +143,7 @@ class Page extends Model
     /**
      * Returns the working draft schema used in the editor and live preview.
      *
-     * @return array<string, mixed>
+     * @return array{version: int, elements: array<int, array<string, mixed>>}
      */
     public function getWorkingSchema(): array
     {
@@ -150,7 +155,7 @@ class Page extends Model
     /**
      * Returns the published schema shown to public website visitors.
      *
-     * @return array<string, mixed>
+     * @return array{version: int, elements: array<int, array<string, mixed>>}
      */
     public function getPublishedSchema(): array
     {
@@ -160,7 +165,7 @@ class Page extends Model
     }
 
     /**
-     * @param  array<string, mixed>  $schema
+     * @param  array<mixed>  $schema
      * @return array{version: int, elements: array<int, array<string, mixed>>}
      */
     public static function normalizeSchema(array $schema): array
@@ -168,16 +173,19 @@ class Page extends Model
         if (isset($schema['elements']) && is_array($schema['elements'])) {
             return [
                 'version' => (int) ($schema['version'] ?? 1),
-                'elements' => array_values($schema['elements']),
+                'elements' => array_values(array_filter($schema['elements'], 'is_array')),
             ];
         }
 
-        // Support passing a flat list of root elements directly
+        // Support passing a flat list of root element arrays directly
         if (array_is_list($schema)) {
-            return [
-                'version' => 1,
-                'elements' => $schema,
-            ];
+            $filtered = array_values(array_filter($schema, 'is_array'));
+            if ($filtered !== [] || $schema === []) {
+                return [
+                    'version' => 1,
+                    'elements' => $filtered,
+                ];
+            }
         }
 
         return static::emptySchema();

@@ -8,6 +8,7 @@ use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Database\Eloquent\Model;
 use KalimeroMK\FilamentPageBuilder\Filament\Resources\PageResource;
 use KalimeroMK\FilamentPageBuilder\Models\Page;
 
@@ -31,22 +32,26 @@ class EditPage extends EditRecord
     }
 
     /**
+     * @param  Page  $record
      * @param  array<string, mixed>  $data
-     * @return array<string, mixed>
      */
-    protected function mutateFormDataBeforeSave(array $data): array
+    protected function handleRecordUpdate(Model $record, array $data): Model
     {
         $rawJson = $data['draft_content_json'] ?? null;
         unset($data['draft_content_json']);
 
+        $schema = $record->getWorkingSchema();
         if (is_string($rawJson) && trim($rawJson) !== '') {
             $decoded = json_decode($rawJson, true);
             if (is_array($decoded)) {
-                $data['draft_content'] = Page::normalizeSchema($decoded);
+                $schema = Page::normalizeSchema($decoded);
             }
         }
 
-        return $data;
+        $record->fill($data);
+        $record->saveDraft($schema, is_array($data['meta'] ?? null) ? $data['meta'] : null);
+
+        return $record;
     }
 
     protected function getHeaderActions(): array

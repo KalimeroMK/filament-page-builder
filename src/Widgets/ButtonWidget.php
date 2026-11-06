@@ -34,8 +34,8 @@ class ButtonWidget extends AbstractWidget
             'link' => '#',
             'style' => 'primary',
             'open_in_new_tab' => false,
-            'background_color' => '#2563eb',
-            'text_color' => '#ffffff',
+            'background_color' => null,
+            'text_color' => null,
             'border_radius' => 8,
             'font_size' => 16,
             'text_align' => 'left',
@@ -88,11 +88,9 @@ class ButtonWidget extends AbstractWidget
         return [
             Grid::make(2)->schema([
                 ColorPicker::make('background_color')
-                    ->label('Background Color')
-                    ->default('#2563eb'),
+                    ->label('Custom Background Color'),
                 ColorPicker::make('text_color')
-                    ->label('Text Color')
-                    ->default('#ffffff'),
+                    ->label('Custom Text Color'),
             ]),
             Grid::make(3)->schema([
                 TextInput::make('border_radius')

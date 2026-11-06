@@ -7,12 +7,13 @@ namespace KalimeroMK\FilamentPageBuilder;
 use Filament\Contracts\Plugin;
 use Filament\Panel;
 use KalimeroMK\FilamentPageBuilder\Filament\Resources\PageResource;
+use UnitEnum;
 
 class FilamentPageBuilderPlugin implements Plugin
 {
     protected bool $hasPageResource = true;
 
-    protected ?string $navigationGroup = 'Content';
+    protected string | UnitEnum | null $navigationGroup = 'Content';
 
     protected ?int $navigationSort = 10;
 
@@ -46,14 +47,14 @@ class FilamentPageBuilderPlugin implements Plugin
         return $this->hasPageResource;
     }
 
-    public function navigationGroup(?string $group): static
+    public function navigationGroup(string | UnitEnum | null $group): static
     {
         $this->navigationGroup = $group;
 
         return $this;
     }
 
-    public function getNavigationGroup(): ?string
+    public function getNavigationGroup(): string | UnitEnum | null
     {
         return $this->navigationGroup;
     }

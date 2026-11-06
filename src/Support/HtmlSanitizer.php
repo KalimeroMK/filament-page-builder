@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace KalimeroMK\FilamentPageBuilder\Support;
 
+use Illuminate\Support\Str;
+
 class HtmlSanitizer
 {
     /**
-     * Sanitize rich text HTML by stripping executable tags, event handlers,
-     * and dangerous URI schemes while preserving safe formatting tags.
+     * Sanitize rich text HTML using Symfony's DOM-based HTML sanitizer (bundled with Filament v5)
+     * plus defense-in-depth stripping of executable tags.
      */
     public static function clean(string $html): string
     {
@@ -16,34 +18,44 @@ class HtmlSanitizer
             return '';
         }
 
-        // Remove script, style, iframe, object, embed, form tags and their contents
-        $cleaned = (string) preg_replace(
-            '#<(script|style|iframe|object|embed|applet|meta|link|form)\b[^>]*>.*?</\1>#is',
+        // Pre-strip script/style blocks completely before DOM sanitization
+        $preCleaned = (string) preg_replace(
+            '#<(script|style|iframe|object|embed|applet|frameset|frame)\b[^>]*>.*?</\1>#is',
             '',
             $html,
         );
 
-        // Remove self-closing or unclosed dangerous tags
-        $cleaned = (string) preg_replace(
-            '#</?(script|style|iframe|object|embed|applet|meta|link|form|input|button)\b[^>]*>#is',
-            '',
-            $cleaned,
-        );
+        return Str::sanitizeHtml($preCleaned);
+    }
 
-        // Remove inline event handlers such as onclick="", onerror="", onload=""
-        $cleaned = (string) preg_replace(
-            '/\s+on[a-zA-Z]+\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s>]+)/i',
-            '',
-            $cleaned,
-        );
+    /**
+     * Sanitize a URL for safe use in href/src attributes.
+     * Allows safe relative paths (starting with /, #, ?) and http/https/mailto/tel URLs.
+     */
+    public static function sanitizeUrl(string $url, string $default = '#'): string
+    {
+        $trimmed = trim($url);
 
-        // Neutralize javascript:, vbscript:, and data:text/html URIs in href/src
-        $cleaned = (string) preg_replace(
-            '/\b(href|src|xlink:href)\s*=\s*(["\']?)\s*(?:javascript|vbscript|data\s*:\s*text\/html)\s*:[^"\'>\s]*\2/i',
-            '$1="#"',
-            $cleaned,
-        );
+        if ($trimmed === '') {
+            return $default;
+        }
 
-        return $cleaned;
+        // Reject any ASCII control characters or whitespace inside scheme/path
+        if (preg_match('/[\x00-\x1F\x7F]/', $trimmed)) {
+            return $default;
+        }
+
+        if (str_starts_with($trimmed, '//')) {
+            return $default;
+        }
+
+        // Allow safe relative URLs (/path, #anchor, ?query)
+        if (str_starts_with($trimmed, '/') || str_starts_with($trimmed, '#') || str_starts_with($trimmed, '?')) {
+            return $trimmed;
+        }
+
+        $sanitized = Str::sanitizeUrl($trimmed, ['http', 'https', 'mailto', 'tel']);
+
+        return ($sanitized !== null && $sanitized !== '') ? $sanitized : $default;
     }
 }

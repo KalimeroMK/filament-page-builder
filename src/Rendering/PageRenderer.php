@@ -90,7 +90,7 @@ class PageRenderer
     protected function renderElement(array $element, array $context, array &$cssChunks): string
     {
         $type = (string) ($element['type'] ?? '');
-        $id = (string) ($element['id'] ?? uniqid('el_'));
+        $id = filled($element['id'] ?? null) ? (string) $element['id'] : uniqid('el_');
         $element['id'] = $id;
 
         $widget = $this->widgets->get($type);
@@ -107,12 +107,14 @@ class PageRenderer
             $settings = $this->dynamicTags->resolveElementSettings($settings, $dynamicMap, $context);
         }
 
-        // Visibility checks per device / setting
+        event(new BeforeElementRender($element, $settings, $context));
+
+        $id = filled($element['id'] ?? null) ? (string) $element['id'] : $id;
+        $element['id'] = $id;
+
         if (! empty($settings['hide_element'])) {
             return '';
         }
-
-        event(new BeforeElementRender($element, $settings, $context));
 
         $elementCss = $this->cssGenerator->generateForElement($id, $widget, $settings);
         if ($elementCss !== '') {

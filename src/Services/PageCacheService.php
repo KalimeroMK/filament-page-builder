@@ -19,7 +19,7 @@ class PageCacheService
     {
         $prefix = (string) config('filament-page-builder.cache.prefix', 'fpb_page_render_');
 
-        return $prefix . $page->getKey() . '_' . ($page->updated_at?->getTimestamp() ?? 0);
+        return $prefix . $page->getKey();
     }
 
     public function get(Page $page): ?RenderedPage

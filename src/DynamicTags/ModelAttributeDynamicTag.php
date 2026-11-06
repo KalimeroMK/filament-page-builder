@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace KalimeroMK\FilamentPageBuilder\DynamicTags;
 
+use Illuminate\Database\Eloquent\Model;
 use KalimeroMK\FilamentPageBuilder\Contracts\DynamicTagContract;
 
 class ModelAttributeDynamicTag implements DynamicTagContract
@@ -37,6 +38,9 @@ class ModelAttributeDynamicTag implements DynamicTagContract
             return $parameters['fallback'] ?? null;
         }
 
-        return data_get($record, $key, $parameters['fallback'] ?? null);
+        // Convert Eloquent models via toArray() so $hidden attributes (e.g. password, remember_token) are never exposed
+        $safeData = $record instanceof Model ? $record->toArray() : $record;
+
+        return data_get($safeData, $key, $parameters['fallback'] ?? null);
     }
 }

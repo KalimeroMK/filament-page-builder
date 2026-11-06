@@ -7,6 +7,7 @@ namespace KalimeroMK\FilamentPageBuilder\Services;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 use KalimeroMK\FilamentPageBuilder\Enums\PageStatus;
 use KalimeroMK\FilamentPageBuilder\Events\PageDraftSaved;
 use KalimeroMK\FilamentPageBuilder\Events\PagePublished;
@@ -60,7 +61,8 @@ class PagePublishService
         event(new PagePublishing($page, $schemaToPublish));
 
         DB::transaction(function () use ($page, $schemaToPublish, $summary, $userId): void {
-            $this->cache->forget($page);
+            // Lock the page row to prevent concurrent revision number collisions
+            $page->newQuery()->whereKey($page->getKey())->lockForUpdate()->first();
 
             $page->draft_content = $schemaToPublish;
             $page->content = $schemaToPublish;
@@ -104,8 +106,6 @@ class PagePublishService
      */
     public function unpublish(Page $page): Page
     {
-        $this->cache->forget($page);
-
         $page->status = PageStatus::Draft;
         $page->save();
 
@@ -119,6 +119,10 @@ class PagePublishService
      */
     public function restoreRevision(Page $page, PageRevision $revision): Page
     {
+        if ((int) $revision->page_id !== (int) $page->getKey()) {
+            throw new InvalidArgumentException('The given revision does not belong to this page.');
+        }
+
         $page->draft_content = Page::normalizeSchema($revision->schema_snapshot);
 
         if ($revision->meta_snapshot !== null) {

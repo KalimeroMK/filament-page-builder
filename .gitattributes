@@ -1,0 +1,8 @@
+# Keep the distributed package lean (Packagist / Composer dist)
+/.github/           export-ignore
+/demo/              export-ignore
+/tests/             export-ignore
+/PLAN.md            export-ignore
+/HANDOFF.md         export-ignore
+/phpunit.xml.dist   export-ignore
+/.gitignore         export-ignore

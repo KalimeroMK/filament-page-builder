@@ -3,7 +3,7 @@
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/kalimeromk/filament-page-builder.svg?style=flat-square)](https://packagist.org/packages/kalimeromk/filament-page-builder)
 [![Total Downloads](https://img.shields.io/packagist/dt/kalimeromk/filament-page-builder.svg?style=flat-square)](https://packagist.org/packages/kalimeromk/filament-page-builder)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)](LICENSE.md)
-[![Tests](https://img.shields.io/badge/tests-31%20passing-brightgreen?style=flat-square)](#testing)
+[![Tests](https://github.com/KalimeroMK/filament-page-builder/actions/workflows/tests.yml/badge.svg)](https://github.com/KalimeroMK/filament-page-builder/actions/workflows/tests.yml)
 
 > **Build pages in Laravel without writing code — an open-source (MIT) Elementor Pro-like visual page builder plugin for Filament v5.**
 
@@ -458,7 +458,9 @@ composer test
 ./vendor/bin/pest
 ```
 
-**31 feature tests (262+ assertions)** covering: widget registry & schemas, rendering & responsive CSS, Draft/Preview/Publish lifecycle, revisions, Add-on API, Theme Builder conditions, Navigator, Loop Builder & Dynamic Tags, Form Builder (validation, actions, SSRF, honeypot), Popups & Turnstile.
+**52 feature tests (401+ assertions)** covering: widget registry & schemas, rendering & responsive CSS, Draft/Preview/Publish lifecycle, revisions, Add-on API, Theme Builder conditions, Navigator, Loop Builder & Dynamic Tags, Form Builder (validation, actions, SSRF, honeypot), Popups & Turnstile, Global Settings, Global Widget, Custom 404, Autoresponder, Nav Menu, Custom Assets, Schema Diff, Site Kit, Maintenance mode, and Finder.
+
+CI runs automatically on every push/PR via GitHub Actions (`.github/workflows/tests.yml`) on PHP 8.3, 8.4 and 8.5.
 
 ## FAQ
 

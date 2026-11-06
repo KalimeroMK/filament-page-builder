@@ -100,6 +100,12 @@ class FilamentPageBuilderServiceProvider extends PackageServiceProvider
         $this->registerLivewireComponents();
         $this->registerBladeDirectives();
         $this->registerAuthorizationGate();
+        $this->registerMaintenanceMiddleware();
+    }
+
+    protected function registerMaintenanceMiddleware(): void
+    {
+        $this->app['router']->pushMiddlewareToGroup('web', \KalimeroMK\FilamentPageBuilder\Http\Middleware\MaintenanceMiddleware::class);
     }
 
     protected function registerAuthorizationGate(): void

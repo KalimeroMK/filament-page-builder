@@ -38,6 +38,9 @@ if (config('filament-page-builder.routing.enabled', true)) {
         Route::post('/_builder/popup-form/{popup}/{elementId}', [\KalimeroMK\FilamentPageBuilder\Http\Controllers\FormController::class, 'submitPopup'])
             ->middleware('throttle:' . $throttle)
             ->name('filament-page-builder.popup-form.submit');
+
+        Route::get('/_builder/loop/{page}/{elementId}', [\KalimeroMK\FilamentPageBuilder\Http\Controllers\LoopController::class, 'load'])
+            ->name('filament-page-builder.loop.load');
     });
 
     Route::fallback([\KalimeroMK\FilamentPageBuilder\Http\Controllers\NotFoundController::class, 'show'])

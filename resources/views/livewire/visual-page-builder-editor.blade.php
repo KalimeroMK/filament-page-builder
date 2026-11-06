@@ -13,6 +13,7 @@
     x-data="{
         draggedElementId: null,
         draggedWidgetType: null,
+        finderOpen: false,
         handleWidgetDragStart(event, type) {
             this.draggedWidgetType = type;
             this.draggedElementId = null;
@@ -49,8 +50,47 @@
         }
     }"
     style="display: flex; flex-direction: column; min-height: 82vh; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: #f1f5f9;"
+    x-on:keydown.ctrl.k.window.prevent="finderOpen = true"
+    x-on:keydown.meta.k.window.prevent="finderOpen = true"
 >
     <style>{!! $generatedCss !!}</style>
+
+    {{-- Finder (Ctrl+K) --}}
+    <div
+        x-show="finderOpen"
+        x-cloak
+        x-on:keydown.escape.window="finderOpen = false"
+        style="position: fixed; inset: 0; z-index: 9999; background: rgba(15, 23, 42, 0.6); display: flex; align-items: flex-start; justify-content: center; padding-top: 12vh;"
+        x-on:click.self="finderOpen = false"
+    >
+        <div style="background: #ffffff; width: min(92vw, 560px); border-radius: 12px; box-shadow: 0 25px 60px rgba(15,23,42,0.35); overflow: hidden;">
+            <div style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">
+                <input
+                    type="text"
+                    wire:model.live.debounce.250ms="finderQuery"
+                    x-init="$nextTick(() => $el.focus())"
+                    placeholder="Search elements by ID, type or text… (Ctrl+K)"
+                    style="width: 100%; border: 0; outline: none; font-size: 15px; padding: 6px 0;"
+                />
+            </div>
+            <div style="max-height: 50vh; overflow-y: auto;">
+                @forelse($finderResults as $result)
+                    <button
+                        type="button"
+                        wire:click="selectElementFromFinder('{{ preg_replace('/[^a-zA-Z0-9_-]/', '', $result['id']) }}'); finderOpen = false"
+                        style="display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 10px 16px; border: 0; border-bottom: 1px solid #f1f5f9; background: #ffffff; text-align: left; cursor: pointer;"
+                    >
+                        <span style="font-size: 13px; font-weight: 600; color: #0f172a;">{{ $result['label'] }}</span>
+                        <span style="font-size: 11px; color: #64748b;">{{ $result['breadcrumb'] }}</span>
+                    </button>
+                @empty
+                    <div style="padding: 20px; text-align: center; color: #64748b; font-size: 13px;">
+                        {{ $finderQuery === '' ? 'Type to search elements…' : 'No elements found.' }}
+                    </div>
+                @endforelse
+            </div>
+        </div>
+    </div>
 
     {{-- Top Editor Toolbar: Page Status + Undo/Redo + Viewport Switcher + Save Draft / Preview / Publish --}}
     <header style="display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; background: #0f172a; color: #f8fafc; border-bottom: 1px solid #1e293b; gap: 16px; flex-wrap: wrap;">

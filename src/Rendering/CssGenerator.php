@@ -242,6 +242,17 @@ class CssGenerator
     flex-direction: column;
     gap: var(--fpb-gap, 20px);
 }
+.fpb-loop--carousel .fpb-loop-items {
+    display: flex;
+    gap: var(--fpb-gap, 20px);
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 8px;
+}
+.fpb-loop--carousel .fpb-loop-item {
+    flex: 0 0 calc(100% / var(--fpb-loop-cols, 3) - var(--fpb-gap, 20px));
+    scroll-snap-align: start;
+}
 .fpb-loop-item {
     min-width: 0;
 }

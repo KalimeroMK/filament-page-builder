@@ -52,6 +52,8 @@ class LoopWidget extends AbstractWidget
             'layout' => 'grid',
             'columns' => 3,
             'gap' => 20,
+            'pagination' => 'none',
+            'page_size' => 6,
         ]);
     }
 
@@ -124,7 +126,7 @@ class LoopWidget extends AbstractWidget
             Grid::make(2)->schema([
                 Select::make('layout')
                     ->label('Loop Layout')
-                    ->options(['grid' => 'Grid', 'list' => 'List'])
+                    ->options(['grid' => 'Grid', 'list' => 'List', 'carousel' => 'Carousel'])
                     ->default('grid'),
                 TextInput::make('columns')
                     ->label('Grid Columns')
@@ -135,6 +137,14 @@ class LoopWidget extends AbstractWidget
                 ->label('Gap (px)')
                 ->numeric()
                 ->default(20),
+            Select::make('pagination')
+                ->label('Pagination')
+                ->options(['none' => 'None', 'load_more' => 'Load More (AJAX)'])
+                ->default('none'),
+            TextInput::make('page_size')
+                ->label('Items Per Page')
+                ->numeric()
+                ->default(6),
         ];
     }
 
@@ -166,45 +176,77 @@ class LoopWidget extends AbstractWidget
             return parent::render($element, $settings, $childrenHtml, $context);
         }
 
-        $records = app(LoopQueryBuilder::class)->query($settings);
-        $settings['loop_records'] = $records;
+        $itemsData = $this->renderItems($settings, $context, $itemSchema);
 
-        if ($records->isNotEmpty()) {
-            $renderer = app(PageRenderer::class);
-            $renderedItems = [];
-            $cssParts = [];
-
-            $nextContext = $context;
-            $nextContext['loop_depth'] = $depth + 1;
-            $nextContext['loop_template_stack'] = $stack;
-            if (is_numeric($settings['template_id'] ?? null)) {
-                $nextContext['loop_template_stack'][] = (int) $settings['template_id'];
-            }
-
-            foreach ($records as $record) {
-                $freshElements = array_values(array_map(
-                    fn (array $el): array => SchemaTreeManipulator::cloneWithFreshIds($el),
-                    $itemSchema['elements'],
-                ));
-
-                $itemContext = array_merge($nextContext, [
-                    'record' => $record,
-                    'model' => $record,
-                    'is_loop_item' => true,
-                ]);
-
-                $rendered = $renderer->renderSchema(['version' => 1, 'elements' => $freshElements], $itemContext);
-                $renderedItems[] = $rendered;
-                if ($rendered->css !== '') {
-                    $cssParts[] = $rendered->css;
-                }
-            }
-
-            $settings['rendered_loop_items'] = $renderedItems;
-            $settings['loop_items_css'] = implode("\n", $cssParts);
-        }
+        $settings['rendered_loop_items'] = $itemsData['items'];
+        $settings['loop_items_css'] = $itemsData['css'];
+        $settings['loop_has_more'] = $itemsData['has_more'];
 
         return parent::render($element, $settings, $childrenHtml, $context);
+    }
+
+    /**
+     * Render loop items for the current page and determine whether more records exist.
+     *
+     * @param  array<string, mixed>  $settings
+     * @param  array<string, mixed>  $context
+     * @param  array{version: int, elements: array<int, array<string, mixed>>}|null  $itemSchema
+     * @return array{items: array<int, \KalimeroMK\FilamentPageBuilder\Rendering\RenderedPage>, css: string, has_more: bool}
+     */
+    public function renderItems(array $settings, array $context = [], ?array $itemSchema = null): array
+    {
+        if ($itemSchema === null) {
+            $stack = is_array($context['loop_template_stack'] ?? null) ? $context['loop_template_stack'] : [];
+            $itemSchema = $this->resolveItemSchema($settings, $stack);
+
+            if ($itemSchema === null) {
+                return ['items' => [], 'css' => '', 'has_more' => false];
+            }
+        }
+
+        $records = app(LoopQueryBuilder::class)->query($settings);
+
+        if ($records->isEmpty()) {
+            return ['items' => [], 'css' => '', 'has_more' => false];
+        }
+
+        $renderer = app(PageRenderer::class);
+        $renderedItems = [];
+        $cssParts = [];
+        $depth = (int) ($context['loop_depth'] ?? 0);
+        $stack = is_array($context['loop_template_stack'] ?? null) ? $context['loop_template_stack'] : [];
+
+        $nextContext = $context;
+        $nextContext['loop_depth'] = $depth + 1;
+        $nextContext['loop_template_stack'] = $stack;
+        if (is_numeric($settings['template_id'] ?? null)) {
+            $nextContext['loop_template_stack'][] = (int) $settings['template_id'];
+        }
+
+        foreach ($records as $record) {
+            $freshElements = array_values(array_map(
+                fn (array $el): array => SchemaTreeManipulator::cloneWithFreshIds($el),
+                $itemSchema['elements'],
+            ));
+
+            $itemContext = array_merge($nextContext, [
+                'record' => $record,
+                'model' => $record,
+                'is_loop_item' => true,
+            ]);
+
+            $rendered = $renderer->renderSchema(['version' => 1, 'elements' => $freshElements], $itemContext);
+            $renderedItems[] = $rendered;
+            if ($rendered->css !== '') {
+                $cssParts[] = $rendered->css;
+            }
+        }
+
+        return [
+            'items' => $renderedItems,
+            'css' => implode("\n", $cssParts),
+            'has_more' => app(LoopQueryBuilder::class)->hasMore($settings),
+        ];
     }
 
     /**

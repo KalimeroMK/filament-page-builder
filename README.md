@@ -485,6 +485,8 @@ No. Everything is and stays MIT forever — there is no paid version and no lock
 - [x] v0.7 — Popup Builder + conditional/multi-step forms + Turnstile
 - [x] v1.0 — Documentation, test suite, stable release
 - [x] v1.1 — Global Site Settings, Global Widget, Custom CSS/Attributes, Custom 404, Submissions admin, Autoresponder, 9 new widgets
+- [x] v1.2 — Nav Menu + off-canvas, Motion/Sticky/Device visibility, Custom Fonts/Icons, Role Manager, Revision diff
+- [x] v1.3 — Full Site Kit import/export, Loop Carousel + AJAX pagination, Maintenance mode, Finder (Ctrl+K)
 
 **Planned free add-ons (also MIT):** e-commerce widgets (Lunar/Bagisto/Cashier), CRM & newsletter integrations (Mailchimp, HubSpot), advanced motion effects, template cloud library, A/B testing — all published for free.
 

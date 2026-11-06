@@ -16,19 +16,23 @@ class LoopQueryBuilder
      * @param  array<string, mixed>  $settings
      * @return Collection<int, Model>
      */
-    public function query(array $settings): Collection
+    /**
+     * @param  array<string, mixed>  $settings
+     * @return \Illuminate\Database\Eloquent\Builder<\Illuminate\Database\Eloquent\Model>
+     */
+    protected function buildQuery(array $settings): \Illuminate\Database\Eloquent\Builder
     {
         $modelClass = (string) ($settings['model_class'] ?? '');
 
         if (! class_exists($modelClass) || ! is_subclass_of($modelClass, Model::class)) {
-            return new Collection();
+            throw new \InvalidArgumentException('Invalid model class for loop query.');
         }
 
         if (! $this->isModelAllowed($modelClass)) {
-            return new Collection();
+            throw new \InvalidArgumentException('Model class is not allowed for loop queries.');
         }
 
-        /** @var Builder<Model> $query */
+        /** @var \Illuminate\Database\Eloquent\Builder<\Illuminate\Database\Eloquent\Model> $query */
         $query = $modelClass::query();
 
         $scope = preg_replace('/[^a-zA-Z0-9_]/', '', (string) ($settings['scope'] ?? ''));
@@ -75,10 +79,49 @@ class LoopQueryBuilder
         $orderDirection = strtolower((string) ($settings['order_direction'] ?? 'desc')) === 'asc' ? 'asc' : 'desc';
         $query->orderBy($orderBy, $orderDirection);
 
-        $limit = max(1, min(100, (int) ($settings['limit'] ?? 6)));
-        $query->limit($limit);
+        return $query;
+    }
 
-        return $query->get();
+    public function query(array $settings): Collection
+    {
+        try {
+            $query = $this->buildQuery($settings);
+        } catch (\InvalidArgumentException) {
+            return new Collection();
+        }
+
+        $pageSize = max(1, min(100, (int) ($settings['page_size'] ?? $settings['limit'] ?? 6)));
+        $page = max(1, (int) ($settings['page'] ?? 1));
+        $totalCap = max(1, min(500, (int) ($settings['limit'] ?? 100)));
+
+        return $query
+            ->offset(($page - 1) * $pageSize)
+            ->limit(min($pageSize, $totalCap))
+            ->get();
+    }
+
+    /**
+     * Determine whether at least one record exists after the current page.
+     *
+     * @param  array<string, mixed>  $settings
+     */
+    public function hasMore(array $settings): bool
+    {
+        try {
+            $query = $this->buildQuery($settings);
+        } catch (\InvalidArgumentException) {
+            return false;
+        }
+
+        $pageSize = max(1, min(100, (int) ($settings['page_size'] ?? $settings['limit'] ?? 6)));
+        $page = max(1, (int) ($settings['page'] ?? 1));
+        $totalCap = max(1, min(500, (int) ($settings['limit'] ?? 100)));
+        $effectiveSize = min($pageSize, $totalCap);
+
+        return $query
+            ->offset($page * $effectiveSize)
+            ->limit(1)
+            ->exists();
     }
 
     /**

@@ -37,8 +37,6 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
     public int | string $pageId;
 
     /**
-     * Working JSON schema in the editor (`version` + `elements`).
-     *
      * @var array{version: int, elements: array<int, array<string, mixed>>}
      */
     public array $schema = [
@@ -112,6 +110,11 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
     public string $newTemplateCategory = 'section';
 
     public string $importJsonPayload = '';
+
+    /**
+     * Finder (Ctrl+K) search query for locating elements by ID/type/text.
+     */
+    public string $finderQuery = '';
 
     /**
      * Currently compared revision ID and its diff result against the current editor schema.
@@ -501,6 +504,59 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
             ->title("Restored Revision #{$revision->version_number} into Draft")
             ->info()
             ->send();
+    }
+
+    /**
+     * Finder (Ctrl+K): search elements by ID, widget type, or text content, with breadcrumb path.
+     *
+     * @return array<int, array{id: string, type: string, label: string, breadcrumb: string}>
+     */
+    public function getFinderResultsProperty(): array
+    {
+        $query = mb_strtolower(trim($this->finderQuery));
+        $results = [];
+
+        $walk = function (array $elements, string $path) use (&$walk, &$results, $query): void {
+            foreach ($elements as $element) {
+                if (! is_array($element)) {
+                    continue;
+                }
+
+                $id = (string) ($element['id'] ?? '');
+                $type = (string) ($element['type'] ?? '');
+                $breadcrumb = trim($path . ' / ' . $type, ' /');
+
+                if ($query !== '') {
+                    $settingsText = mb_strtolower(json_encode($element['settings'] ?? [], JSON_UNESCAPED_UNICODE) ?: '');
+
+                    if (
+                        str_contains(mb_strtolower($id), $query)
+                        || str_contains(mb_strtolower($type), $query)
+                        || str_contains($settingsText, $query)
+                    ) {
+                        $results[] = [
+                            'id' => $id,
+                            'type' => $type,
+                            'label' => ucfirst($type) . ' #' . $id,
+                            'breadcrumb' => $breadcrumb,
+                        ];
+                    }
+                }
+
+                if (! empty($element['children']) && is_array($element['children'])) {
+                    $walk($element['children'], $breadcrumb);
+                }
+            }
+        };
+
+        $walk($this->schema['elements'], '');
+
+        return array_slice($results, 0, 25);
+    }
+
+    public function selectElementFromFinder(string $elementId): void
+    {
+        $this->selectElement($elementId);
     }
 
     /**
@@ -953,6 +1009,7 @@ class VisualPageBuilderEditor extends Component implements HasSchemas
             'revisions' => $page->revisions()->limit(20)->get(),
             'availableLayouts' => array_keys((array) config('filament-page-builder.layouts', ['default' => 'default'])),
             'availableDynamicTags' => $this->getAvailableDynamicTags(),
+            'finderResults' => $this->finderResults,
         ]);
     }
 

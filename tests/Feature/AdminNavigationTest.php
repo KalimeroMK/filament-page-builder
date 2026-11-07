@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use Filament\Navigation\NavigationGroup;
 use Filament\Panel;
-use KalimeroMK\FilamentPageBuilder\Filament\Pages\MaintenanceSettingsPage;
 use KalimeroMK\FilamentPageBuilder\Filament\Pages\SiteKitPage;
 use KalimeroMK\FilamentPageBuilder\Filament\Pages\SiteSettingsPage;
 use KalimeroMK\FilamentPageBuilder\Filament\Resources\CategoryResource;
@@ -32,12 +31,15 @@ it('groups every Page Builder admin item under one collapsible Page Builder menu
         MenuResource::class,
         SiteSettingsPage::class,
         SiteKitPage::class,
-        MaintenanceSettingsPage::class,
     ];
 
     foreach ($resources as $resource) {
         expect($resource::getNavigationGroup())->toBe('Page Builder');
     }
+
+    expect($panel->getPages())
+        ->toContain(SiteSettingsPage::class)
+        ->not->toContain(\KalimeroMK\FilamentPageBuilder\Filament\Pages\MaintenanceSettingsPage::class);
 
     $groups = $panel->getNavigationGroups();
 

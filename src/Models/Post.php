@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Storage;
  * @property string|null $body
  * @property string|null $image
  * @property string|null $image_url
+ * @property string $public_url
  * @property string|null $author
  * @property string $status
  * @property Carbon|null $published_at
@@ -30,7 +31,7 @@ class Post extends Model
 
     protected $with = ['category'];
 
-    protected $appends = ['image_url'];
+    protected $appends = ['image_url', 'public_url'];
 
     public function getTable(): string
     {
@@ -62,6 +63,11 @@ class Post extends Model
         }
 
         return Storage::disk('public')->url($image);
+    }
+
+    public function getPublicUrlAttribute(): string
+    {
+        return route('filament-page-builder.post.show', ['slug' => $this->slug]);
     }
 
     /**

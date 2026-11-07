@@ -71,9 +71,9 @@ class StarterContentSeeder extends Seeder
                         'admin_label' => 'Article card',
                     ],
                     'children' => [
-                        ['id' => 'starter_image', 'type' => 'image', 'settings' => ['src' => '', 'alt' => '', 'height' => 180, 'object_fit' => 'cover', 'border_radius' => 8, 'admin_label' => 'Article image'], 'dynamic' => ['src' => 'model.attribute:image_url', 'alt' => 'model.attribute:title']],
+                        ['id' => 'starter_image', 'type' => 'image', 'settings' => ['src' => '', 'alt' => '', 'height' => 180, 'object_fit' => 'cover', 'border_radius' => 8, 'admin_label' => 'Article image'], 'dynamic' => ['src' => 'model.attribute:image_url', 'alt' => 'model.attribute:title', 'link' => 'model.attribute:public_url']],
                         ['id' => 'starter_category', 'type' => 'text', 'settings' => ['content' => '', 'color' => '#dc2626', 'font_size' => 12, 'admin_label' => 'Article category'], 'dynamic' => ['content' => 'model.attribute:category.name']],
-                        ['id' => 'starter_title', 'type' => 'heading', 'settings' => ['text' => '', 'tag' => 'h3', 'font_size' => 21, 'admin_label' => 'Article title'], 'dynamic' => ['text' => 'model.attribute:title']],
+                        ['id' => 'starter_title', 'type' => 'heading', 'settings' => ['text' => '', 'tag' => 'h3', 'font_size' => 21, 'admin_label' => 'Article title'], 'dynamic' => ['text' => 'model.attribute:title', 'link' => 'model.attribute:public_url']],
                         ['id' => 'starter_excerpt', 'type' => 'text', 'settings' => ['content' => '', 'font_size' => 14, 'color' => '#475569', 'admin_label' => 'Article excerpt'], 'dynamic' => ['content' => 'model.attribute:excerpt']],
                     ],
                 ],

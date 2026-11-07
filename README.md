@@ -24,7 +24,9 @@ Built and maintained by [KalimeroMK](https://github.com/KalimeroMK) • **All fe
 7. [Your first page in 2 minutes](#your-first-page-in-2-minutes)
 8. [Usage guides](#usage-guides)
    - [Pages & Visual Editor](#pages--visual-editor)
-   - [Theme Builder (Header / Footer / Single / Archive)](#theme-builder)
+   - [Menu Builder](#menu-builder)
+   - [Posts & Categories](#posts--categories)
+   - [Theme Builder (Header / Footer / Single / Archive / 404)](#theme-builder)
    - [Dynamic Tags](#dynamic-tags)
    - [Loop Builder](#loop-builder)
    - [Form Builder](#form-builder)
@@ -94,10 +96,11 @@ You get a **Livewire v4 visual editor** inside Filament where users drag widgets
 | --- | --- |
 | **Visual Editor** | Drag & drop canvas, nested Flexbox containers, Content/Style/Advanced inspector, labeled Navigator element tree, Editor Labels, Undo/Redo, Copy/Paste, Duplicate, Hide/Show, responsive viewport switcher |
 | **Workflow** | Draft vs Published, signed Preview URLs, Publish with revisions, Discard Draft, Unpublish, Restore Revision |
+| **Admin & Organization** | Collapsible Page Builder menu, theme groups, parent/child page hierarchy with nested lines, default Visual Builder, Advanced JSON forms and unified Site Settings with Coming Soon/Maintenance |
 | **Posts & Categories** | Built-in Eloquent models and Filament resources, featured image uploads, publishing states, category relationships and optional starter content |
-| **17 Widgets** | Container, Heading, Rich Text, Button, Image, Spacer/Divider, Icon, Video, HTML Embed, Image Gallery, Alert, Accordion, Tabs, Testimonial, Loop Builder, Form Builder |
-| **Theme Builder** | Header/Footer/Single/Archive templates with include/exclude display conditions (path, route, page slug, model) |
-| **Dynamic Content** | Dynamic Tags (`page.title`, `model.attribute:*`, `site.current_date`) + Loop Builder for Eloquent collections with filters/ordering/sub-templates |
+| **26+ Widgets** | Containers, content and media widgets, Gallery, Accordion, Tabs, Testimonial, Loop, Form, Global Widget, Slider, Pricing Table, Countdown, Progress Bar, Social Icons, Rating, Maps, Flip Box, CTA, Nav Menu and more |
+| **Theme Builder** | Visual Builder for Header/Footer/Single/Archive/404 templates with include/exclude display conditions (path, route, page slug, model) |
+| **Dynamic Content** | Dynamic Tags (`page.title`, `model.attribute:*`, `site.current_date`) + Loop Builder with grid/list/carousel, filters, AJAX Load More and numbered pagination |
 | **Forms** | Drag & drop fields, pluggable actions (Email, Redirect, Webhook, Save to Database), conditional logic, multi-step, honeypot, Cloudflare Turnstile, rate limiting |
 | **Popups** | Same schema/renderer as pages, on-load/scroll/exit-intent/click triggers, URL conditions, show-once-per-visitor, accessible dialogs |
 | **Add-on API** | WidgetRegistry, DynamicTagRegistry, TemplateRegistry, FormActionRegistry + lifecycle events |
@@ -160,7 +163,7 @@ Optional configuration:
 ```php
 ->plugin(
     FilamentPageBuilderPlugin::make()
-        ->navigationGroup('Content')
+        ->navigationGroup('Page Builder')
         ->navigationSort(10)
         ->pageResource(true)
         ->themeTemplateResource(true)
@@ -175,13 +178,12 @@ php artisan vendor:publish --tag="filament-page-builder-config"
 
 ## Your first page in 2 minutes
 
-1. In the Filament sidebar, open **Pages → Create**.
-2. Give it a **Title** (e.g. `Home`) and **Slug** (e.g. `home`), then **Create**.
-3. In the table, click **Visual Builder** (or open `Pages → Edit → Open Visual Builder`).
-4. From the **+ Blocks** panel, click **Flex Container**, then **Heading** inside it.
-5. Click the heading on the canvas — the **Inspector** opens with Content / Style / Advanced tabs. Change the text to `Hello Laravel!`.
-6. Click **Save Draft**, then **Preview** to see the draft in the real frontend layout (Desktop / Tablet / Mobile).
-7. Click **Publish** — your page is now live at **`/pages/home`** 🎉
+1. In the Filament sidebar, open **Page Builder → Pages → Create**.
+2. Give it a **Title** (e.g. `Home`) and **Slug** (e.g. `home`), then **Create**. You are redirected to **Visual Builder** automatically.
+3. From the **+ Blocks** panel, click **Flex Container**, then **Heading** inside it.
+4. Click the heading on the canvas — the **Inspector** opens with Content / Style / Advanced tabs. Change the text to `Hello Laravel!`.
+5. Click **Save Draft**, then **Preview** to see the draft in the real frontend layout (Desktop / Tablet / Mobile).
+6. Click **Publish** — your page is now live at **`/pages/home`** 🎉
 
 ## Usage guides
 
@@ -191,12 +193,23 @@ php artisan vendor:publish --tag="filament-page-builder-config"
 
 - **+ Blocks** — widget palette (click or drag onto the canvas / into a container).
 - **Edit (Inspector)** — Filament v5 `Schema` form with **Content / Style / Advanced** tabs for the selected element + **Dynamic Tags** bindings.
-- **Tree (Navigator)** — hierarchical element tree with select, move up/down, hide/show and delete.
+- **Tree (Navigator)** — hierarchical element tree with readable labels, vertical nesting guides, select, move up/down, hide/show and delete.
 - **Library** — Save the full page or a selected block as a reusable template; insert/replace from database or registered templates; **Import / Export JSON**.
-- **History** — published revisions with **Restore**.
+- **History** — published revisions with **Restore** and **Compare**.
 - **SEO** — title, slug, layout (`default`, `canvas`, `full_width`), meta title/description, OG image, `noindex`.
 
-**Top toolbar:** Undo / Redo, Paste Block, viewport switcher, **Discard Draft**, **Save Draft**, **Preview**, **Publish**.
+**Top toolbar:** Undo / Redo, Paste Block, viewport switcher, **Discard Draft**, **Save Draft**, **Preview**, **Publish**. The **Advanced** action opens the classic form with the draft JSON editor.
+
+**Pages admin and hierarchy:**
+
+- Clicking a page, or creating a new one, opens **Visual Builder by default**. The classic form remains available through **Advanced**.
+- **General → Theme & Hierarchy** stores a theme name and optional parent page in metadata. Pages are grouped by theme in a collapsible table and nested with `│` / `└─` lines.
+- Example: `News → Category → Post Default → Post Fullwidth`. Hierarchy depth is cycle-protected.
+
+**Editor labels and container backgrounds:**
+
+- Every widget has **Advanced → Editor Label**. Labels such as `Featured stories` appear in the Navigator and canvas badge instead of only a technical element ID.
+- Containers support **background image, size, position, repeat and attachment**. Choose **Fixed (Parallax)** for a CSS parallax effect, or **Scroll** for normal backgrounds. Image URLs are sanitized before CSS generation.
 
 **Render a page in your own Blade view:**
 
@@ -227,6 +240,46 @@ $page->restoreRevision($rev);    // restore a previous snapshot
 $page->hasUnpublishedChanges();  // true when draft differs from live
 ```
 
+### Menu Builder
+
+**Page Builder → Menus** keeps the WordPress-inspired layout while using Filament theme variables for primary, gray and danger colors at `/admin/menus/{record}/builder`:
+
+- Use the left **Pages** panel with **Most Recent / View All / Search**, page checkboxes, **Select All** and **Add to Menu**, or add a custom label and URL under **Custom Links**.
+- Drag & drop root items and dropdown children, or use the accessible up/down buttons.
+- Click any item to expand its details: navigation label, custom URL, link target and **Custom Link** or **Page** link type.
+- Selecting a Page fills its public `/pages/{slug}` URL automatically and uses the page title when the label is empty.
+- Add dropdown children, move a child to the root or move items between parents without creating unsupported nesting levels.
+- Edit the menu name and slug, then **Save Menu**. Links are normalized and sanitized through the Menu model.
+- The classic Repeater form remains available through **Advanced**.
+
+### Posts & Categories
+
+The package includes a small editorial CMS out of the box — no `App\Models\Post` is required in your application.
+
+- **Page Builder → Posts** provides title/slug, category, author, status, publish date, featured image, excerpt and rich body fields.
+- **Page Builder → Categories** provides named categories with slugs, descriptions and post counts. A post belongs to a category; deleting a category keeps its posts with a null category.
+- Statuses are `draft`, `published`, `scheduled` and `archived`. The `published` query scope requires a non-null `published_at` at or before the current time.
+- **Featured Image** is a real upload on the `public` disk in `fpb/posts`. JPEG, PNG, WebP and GIF are accepted up to **5 MB**; SVG is intentionally not accepted. `fpb:install` creates the public storage link when missing.
+- Published posts have public **`/posts/{slug}`** pages with title, category, author, date, featured image and sanitized body. Draft and future posts return 404.
+
+For uploaded or externally hosted images and public post links, use these attributes in Loop item schemas:
+
+```text
+model.attribute:image_url
+model.attribute:public_url
+model.attribute:category.name
+```
+
+`public_url` generates the public post route and is used by starter/demo loop titles and images.
+
+`image_url` returns the public storage URL for uploads and preserves existing HTTP(S) or root-relative image URLs.
+
+The idempotent starter seeder can also run independently. It creates starter categories/posts and a News page only when they are absent, without overwriting existing content:
+
+```bash
+php artisan db:seed --class="KalimeroMK\FilamentPageBuilder\Database\Seeders\StarterContentSeeder"
+```
+
 ### Theme Builder
 
 Create **Theme Builder → New Template** with a region:
@@ -234,6 +287,11 @@ Create **Theme Builder → New Template** with a region:
 - **Header** / **Footer** — rendered by the layout via `@filamentThemeRegion('header')` / `@filamentThemeRegion('footer')`.
 - **Single** — per-model detail templates.
 - **Archive** — listing templates.
+- **404 Not Found** — custom 404 layout rendered by the fallback controller with a real 404 response.
+
+Theme templates support the same **Visual Builder** used for pages: widgets, drag & drop, Navigator, Editor Labels, responsive canvas and **Save Draft → Publish**. Clicking a template or creating one opens `/admin/theme-templates/{record}/builder`.
+
+Use **Advanced** for the classic JSON form, region, priority and display conditions. Page Preview and Page Revisions are intentionally hidden for theme templates.
 
 **Display conditions** (include/exclude rules):
 
@@ -256,6 +314,8 @@ Bind **any widget setting** to a dynamic source in the Inspector → **Dynamic T
 ```
 model.attribute:title          → current record's `title` attribute
 model.attribute:author.name    → nested attribute / relation
+model.attribute:image_url      → public uploaded image or external image URL
+model.attribute:category.name  → related category name on the built-in Post model
 page.title                     → current page title
 site.current_date              → today's date
 ```
@@ -284,20 +344,24 @@ app(\KalimeroMK\FilamentPageBuilder\Registries\DynamicTagRegistry::class)
 
 ### Loop Builder
 
-Render **any Eloquent collection** as a grid or list:
+Render **any Eloquent collection** as a grid, list or carousel:
 
 1. Add the **Loop Builder** widget.
-2. Set **Model Class** (e.g. `App\Models\Post`), **Limit**, **Order By**, optional scope and filters.
+2. Set **Model Class** (the built-in `KalimeroMK\FilamentPageBuilder\Models\Post` or your own model), **Limit**, **Order By**, optional scope and filters.
 3. Choose a **Sub-template** from the Template Library or paste an **Inline Item JSON Schema**.
 4. Inside the item schema, use `model.attribute:*` — it resolves against the **current record** of each iteration.
+5. Optionally enable **Load More (AJAX)**, **Page Numbers (AJAX)** and exposed frontend filter fields. Responses include `has_more`, `total` and `total_pages` metadata with deterministic ordering.
 
-**Security:** only models listed in `loop.allowed_models` can be queried (fail-closed by default).
+**Security:** only models listed in `loop.allowed_models` can be queried. An empty model list denies every model; the default config allows only the built-in Post model. Field restrictions apply only to models explicitly configured in `allowed_fields`.
 
 ```php
 'loop' => [
-    'allowed_models' => [\App\Models\Post::class],
+    'allowed_models' => [\KalimeroMK\FilamentPageBuilder\Models\Post::class],
     'allowed_fields' => [
-        \App\Models\Post::class => ['id', 'title', 'status', 'created_at'],
+        \KalimeroMK\FilamentPageBuilder\Models\Post::class => [
+            'id', 'category_id', 'title', 'slug', 'excerpt', 'body', 'image',
+            'author', 'status', 'published_at', 'created_at', 'updated_at',
+        ],
     ],
 ],
 ```
@@ -350,8 +414,13 @@ return [
     'cache' => ['enabled' => true, 'ttl' => 86400, 'prefix' => 'fpb_page_render_'],
 
     'loop' => [
-        'allowed_models' => [],
-        'allowed_fields' => [],
+        'allowed_models' => [\KalimeroMK\FilamentPageBuilder\Models\Post::class],
+        'allowed_fields' => [
+            \KalimeroMK\FilamentPageBuilder\Models\Post::class => [
+                'id', 'category_id', 'title', 'slug', 'excerpt', 'body', 'image',
+                'author', 'status', 'published_at', 'created_at', 'updated_at',
+            ],
+        ],
     ],
 
     'forms' => [
@@ -451,10 +520,11 @@ app(\KalimeroMK\FilamentPageBuilder\Registries\FormActionRegistry::class)
 
 ## Security notes
 
-- **XSS**: DOM-based HTML sanitization (Symfony HTML Sanitizer) + URL scheme/control-character filtering on links and images.
+- **XSS**: DOM-based HTML sanitization (Symfony HTML Sanitizer) + URL scheme/control-character filtering on links and images. Background image URLs receive additional CSS-safe validation.
 - **Editor**: `#[Locked]` Livewire properties (IDOR-safe), `RestrictsFileUploadsToSchemaComponents`, panel/policy authorization.
+- **Uploads**: public-disk storage with only JPEG/PNG/WebP/GIF accepted and a 5 MB limit; no executable or SVG uploads.
 - **Preview**: signed URLs or Filament panel/policy check — never "any logged-in user".
-- **Dynamic content**: Eloquent `$hidden` attributes are never exposed; loop models/fields are allowlisted.
+- **Dynamic content**: Eloquent `$hidden` attributes are never exposed; loop models are fail-closed allowlisted and fields can be restricted per model.
 - **Forms**: CSRF, server-side validation, rate limiting, honeypot, optional Turnstile, per-form error bags, sanitized action logs.
 - **Webhooks**: HTTPS only, public IPs only, no redirects, optional host allowlist.
 
@@ -466,7 +536,7 @@ composer test
 ./vendor/bin/pest
 ```
 
-**52 feature tests (401+ assertions)** covering: widget registry & schemas, rendering & responsive CSS, Draft/Preview/Publish lifecycle, revisions, Add-on API, Theme Builder conditions, Navigator, Loop Builder & Dynamic Tags, Form Builder (validation, actions, SSRF, honeypot), Popups & Turnstile, Global Settings, Global Widget, Custom 404, Autoresponder, Nav Menu, Custom Assets, Schema Diff, Site Kit, Maintenance mode, and Finder.
+**72 feature tests (539+ assertions)** covering: widgets and responsive CSS, Page and Theme Template Visual Builders, WordPress-style Menu Builder with nested reordering and Page links, Draft/Preview/Publish, public post routes and loop links, revisions, Add-on API, theme conditions, labeled Navigator, page hierarchy and admin navigation, Posts/Categories and starter installation, public image uploads, Loop Builder & Dynamic Tags, forms and SSRF protection, Popups & Turnstile, unified Global and Coming Soon settings, Custom 404, Nav Menu, Schema Diff, Site Kit, Maintenance mode, and Finder.
 
 CI runs automatically on every push/PR via GitHub Actions (`.github/workflows/tests.yml`) on PHP 8.3, 8.4 and 8.5.
 
@@ -497,6 +567,8 @@ No. Everything is and stays MIT forever — there is no paid version and no lock
 - [x] v1.1 — Global Site Settings, Global Widget, Custom CSS/Attributes, Custom 404, Submissions admin, Autoresponder, 9 new widgets
 - [x] v1.2 — Nav Menu + off-canvas, Motion/Sticky/Device visibility, Custom Fonts/Icons, Role Manager, Revision diff
 - [x] v1.3 — Full Site Kit import/export, Loop Carousel + AJAX pagination, Maintenance mode, Finder (Ctrl+K)
+- [x] v1.3.1 — Coming Soon templates, Loop AJAX filters, numbered pagination and maintenance hardening
+- [x] Current development — Built-in Posts/Categories, starter installer, public image uploads, labeled Navigator, page hierarchy, collapsible admin menu and Visual Builder for theme templates
 
 **Planned free add-ons (also MIT):** e-commerce widgets (Lunar/Bagisto/Cashier), CRM & newsletter integrations (Mailchimp, HubSpot), advanced motion effects, template cloud library, A/B testing — all published for free.
 

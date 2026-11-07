@@ -140,6 +140,7 @@ class FilamentPageBuilderServiceProvider extends PackageServiceProvider
     protected function registerLivewireComponents(): void
     {
         Livewire::component('fpb-visual-editor', VisualPageBuilderEditor::class);
+        Livewire::component('fpb-menu-builder', \KalimeroMK\FilamentPageBuilder\Livewire\MenuBuilder::class);
     }
 
     protected function registerCoreWidgets(): void

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace KalimeroMK\FilamentPageBuilder\Filament\Resources;
 
+use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Facades\Filament;
@@ -18,6 +19,7 @@ use Filament\Tables\Table;
 use KalimeroMK\FilamentPageBuilder\Filament\Resources\MenuResource\Pages\CreateMenu;
 use KalimeroMK\FilamentPageBuilder\Filament\Resources\MenuResource\Pages\EditMenu;
 use KalimeroMK\FilamentPageBuilder\Filament\Resources\MenuResource\Pages\ListMenus;
+use KalimeroMK\FilamentPageBuilder\Filament\Resources\MenuResource\Pages\VisualBuilderMenu;
 use KalimeroMK\FilamentPageBuilder\FilamentPageBuilderPlugin;
 use KalimeroMK\FilamentPageBuilder\Models\Menu;
 use UnitEnum;
@@ -144,8 +146,20 @@ class MenuResource extends Resource
                     ->state(fn (Menu $record): int => count($record->items ?? [])),
                 TextColumn::make('updated_at')->dateTime()->sortable(),
             ])
+            ->recordUrl(fn (Menu $record): ?string => static::canEdit($record)
+                ? static::getUrl('builder', ['record' => $record])
+                : null)
             ->recordActions([
-                EditAction::make(),
+                Action::make('visual_builder')
+                    ->label('Menu Builder')
+                    ->icon('heroicon-o-bars-3')
+                    ->color('primary')
+                    ->visible(fn (Menu $record): bool => static::canEdit($record))
+                    ->url(fn (Menu $record): string => static::getUrl('builder', ['record' => $record])),
+                EditAction::make()
+                    ->label('Advanced')
+                    ->icon('heroicon-o-code-bracket')
+                    ->color('gray'),
                 DeleteAction::make(),
             ]);
     }
@@ -156,6 +170,7 @@ class MenuResource extends Resource
             'index' => ListMenus::route('/'),
             'create' => CreateMenu::route('/create'),
             'edit' => EditMenu::route('/{record}/edit'),
+            'builder' => VisualBuilderMenu::route('/{record}/builder'),
         ];
     }
 }

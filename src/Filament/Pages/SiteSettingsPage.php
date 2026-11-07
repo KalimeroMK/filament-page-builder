@@ -8,7 +8,9 @@ use Filament\Facades\Filament;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Grid;
@@ -17,6 +19,8 @@ use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Schemas\Schema;
 use KalimeroMK\FilamentPageBuilder\FilamentPageBuilderPlugin;
+use KalimeroMK\FilamentPageBuilder\Models\PageTemplate;
+use KalimeroMK\FilamentPageBuilder\Models\Setting;
 use KalimeroMK\FilamentPageBuilder\Services\SiteStyleService;
 use UnitEnum;
 
@@ -72,12 +76,20 @@ class SiteSettingsPage extends Page implements HasSchemas
 
     public function getTitle(): string
     {
-        return 'Global Site Settings (Colors & Typography)';
+        return 'Site Settings';
     }
 
     public function mount(): void
     {
-        $this->data = app(SiteStyleService::class)->values();
+        $this->data = array_merge(
+            app(SiteStyleService::class)->values(),
+            Setting::getGroup('maintenance', [
+                'enabled' => false,
+                'message' => 'We are currently performing scheduled maintenance. Please check back soon.',
+                'template_id' => null,
+                'retry_after_minutes' => 60,
+            ]),
+        );
         $this->data['custom_fonts'] = app(\KalimeroMK\FilamentPageBuilder\Services\CustomAssetsService::class)->customFonts();
     }
 
@@ -158,6 +170,24 @@ class SiteSettingsPage extends Page implements HasSchemas
                                 ]),
                             ]),
                     ]),
+                Section::make('Coming Soon / Maintenance Mode')
+                    ->description('When enabled, public pages return a 503 maintenance page. Admin, preview and Livewire remain accessible.')
+                    ->schema([
+                        Toggle::make('enabled')
+                            ->label('Enable Coming Soon Mode'),
+                        Textarea::make('message')
+                            ->label('Maintenance Message')
+                            ->rows(3),
+                        Select::make('template_id')
+                            ->label('Optional Page Template (Coming Soon)')
+                            ->options(fn (): array => PageTemplate::query()->pluck('name', 'id')->toArray())
+                            ->searchable()
+                            ->helperText('If selected, this template renders as the 503 page with generated CSS.'),
+                        TextInput::make('retry_after_minutes')
+                            ->label('Retry-After (minutes)')
+                            ->numeric()
+                            ->default(60),
+                    ]),
             ]);
     }
 
@@ -183,9 +213,16 @@ class SiteSettingsPage extends Page implements HasSchemas
             app(\KalimeroMK\FilamentPageBuilder\Services\CustomAssetsService::class)->saveFonts($customFonts);
         }
 
+        Setting::setGroup('maintenance', [
+            'enabled' => (bool) ($state['enabled'] ?? false),
+            'message' => (string) ($state['message'] ?? ''),
+            'template_id' => $state['template_id'] !== null ? (int) $state['template_id'] : null,
+            'retry_after_minutes' => max(0, min(525600, (int) ($state['retry_after_minutes'] ?? 60))),
+        ]);
+
         Notification::make()
-            ->title('Global site settings saved')
-            ->body('Colors and typography variables are now applied site-wide.')
+            ->title('Site settings saved')
+            ->body('Global styles and Coming Soon settings are now applied.')
             ->success()
             ->send();
     }
